@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FermiSurfer Preview</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background:#0b1220; color:#e5e7eb; }
+    main { width: min(1240px, 96vw); }
+    .fs-shell{ background:#0f172a; border:1px solid #1f2937; border-radius:12px; padding:12px; box-shadow:0 16px 32px rgba(0,0,0,0.25); }
+    .fs-head{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:8px; }
+    .fs-pill{ padding:6px 10px; border-radius:999px; background:#1d4ed8; color:#e0f2fe; font-size:12px; }
+    .fs-info{ color:#cbd5e1; font-size:13px; }
+    .fs-status{ color:#0f172a; background:#bfdbfe; border-radius:8px; padding:4px 8px; font-size:12px; font-weight:600; }
+    .fs-toolbar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+    .fs-toolbar input[type="file"]{ font-size:13px; color:#0f172a; }
+    .fs-toolbar button{ padding:8px 10px; border-radius:8px; border:1px solid #334155; background:#1e293b; color:#e5e7eb; cursor:pointer; }
+    .fs-toolbar button:hover{ background:#334155; }
+    .fs-modern{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:10px; }
+    .fs-modern label{ display:flex; align-items:center; gap:4px; color:#cbd5e1; font-size:13px; }
+    .fs-modern input, .fs-modern select{ background:#111827; color:#e5e7eb; border:1px solid #334155; border-radius:6px; padding:6px 8px; }
+    .fs-modern button{ padding:8px 12px; border-radius:8px; border:1px solid #22c55e; background:#16a34a; color:#0f172a; cursor:pointer; }
+    .fs-modern button:hover{ background:#22c55e; }
+    .fs-wrap{ position:relative; border:1px solid #1f2937; border-radius:12px; overflow:hidden; background:#ffffff; aspect-ratio: 880 / 620; min-height:calc(360px * 620 / 880); }
+    #glcanvas{ display:block; width:100%; height:100%; max-width:100%; border:0; background:#ffffff; aspect-ratio: 880 / 620; }
+    .fs-overlay{ position:absolute; right:10px; top:10px; padding:6px 10px; border-radius:10px; background:rgba(15,23,42,0.65); color:#cbd5e1; font-size:12px; }
+    .fs-hidden{ display:none !important; visibility:hidden; }
+    #log{ display:none; }
+  </style>
+  <script src="base-url.js"></script>
+  <script src="vendor/gl-matrix-min.js"></script>
+  <script>
+    window.frmsf = "";
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const matId = params.get("id") || params.get("mat_id") || "";
+      const bands = params.get("bands") || "";
+      const iso = params.get("iso");
+      let viewerReady = false;
+
+      async function fetchFrmsf() {
+        const statusEl = document.getElementById("fsStatus");
+        if (!matId) {
+          statusEl.textContent = "Missing material ID; upload BXSF/FRMSF manually.";
+          return;
+        }
+        statusEl.textContent = "Converting BXSF to frmsf...";
+        let url = appUrl(`/api/fermi/${encodeURIComponent(matId)}/frmsf`);
+        const qp = new URLSearchParams();
+        if (bands) qp.set("bands", bands);
+        if (iso) qp.set("iso", iso);
+        const qs = qp.toString();
+        if (qs) url += `?${qs}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || `HTTP ${res.status}`);
+        }
+        window.frmsf = await res.text();
+        statusEl.textContent = `Loaded ${matId} | Bands ${bands || "auto (includes E_F)"} | Iso ${iso ?? "E_F"}`;
+      }
+
+      function applyModernControls() {
+        // No visible style controls; enforce defaults.
+        const modeForm = document.getElementById("colorscalemode");
+        if (modeForm && modeForm.colorscalemode) modeForm.colorscalemode.value = "4";
+        const cb = document.getElementById("colorbar");
+        if (cb) cb.checked = true;
+        const bzForm = document.getElementById("brillouinzone");
+        if (bzForm && bzForm.brillouinzone) bzForm.brillouinzone.value = "1";
+        const eq = document.getElementById("equator");
+        if (eq) eq.checked = false;
+        if (typeof update_now === "function") update_now();
+      }
+
+      function recenterSurface() {
+        if (typeof kvp === "undefined" || typeof ntri === "undefined") return;
+        const px = document.getElementById("positionx");
+        const py = document.getElementById("positiony");
+        const scaleInput = document.getElementById("scale");
+        if (!px || !py || !scaleInput) return;
+
+        const rotMat =
+          typeof rot !== "undefined" && rot && rot.length >= 2
+            ? rot
+            : [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+              ];
+        const scl = parseFloat(scaleInput.value) || 1;
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+
+        const scanVertex = (p) => {
+          if (!p) return;
+          const x = (rotMat[0][0] * p[0] + rotMat[0][1] * p[1] + rotMat[0][2] * p[2]) * scl;
+          const y = (rotMat[1][0] * p[0] + rotMat[1][1] * p[1] + rotMat[1][2] * p[2]) * scl;
+          if (Number.isFinite(x) && Number.isFinite(y)) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        };
+
+        for (let ib = 0; ib < kvp.length; ib++) {
+          if (Array.isArray(draw_band) && draw_band[ib] === 0) continue;
+          const triCount = (ntri && Number.isFinite(ntri[ib])) ? ntri[ib] : (kvp[ib] ? kvp[ib].length : 0);
+          const bandTris = kvp[ib] || [];
+          for (let t = 0; t < triCount && t < bandTris.length; t++) {
+            const tri = bandTris[t];
+            if (!tri) continue;
+            for (let v = 0; v < 3; v++) scanVertex(tri[v]);
+          }
+        }
+
+        if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY)) return;
+        const tx = -((minX + maxX) / 2);
+        const ty = -((minY + maxY) / 2);
+        px.value = tx.toFixed(4);
+        py.value = ty.toFixed(4);
+        if (typeof update_now === "function") update_now();
+      }
+
+      function installModernHandlers() {
+        // No-op: no manual style controls.
+      }
+
+      function loadViewerScript() {
+        const s = document.createElement("script");
+        s.src = appUrl("/static/vendor/fermisurfer.js");
+        s.defer = true;
+        s.onload = () => {
+          viewerReady = true;
+          // apply defaults once the viewer code is ready
+          setTimeout(() => {
+            applyModernControls();
+            recenterSurface();
+          }, 50);
+        };
+        document.head.appendChild(s);
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        const matEl = document.getElementById("fsMatId");
+        const bandEl = document.getElementById("fsBands");
+        const isoEl = document.getElementById("fsIso");
+        if (matId) matEl.textContent = matId;
+        bandEl.textContent = bands || "Auto filter (bands crossing E_F)";
+        isoEl.textContent = iso ?? "E_F";
+        installModernHandlers();
+        try {
+          await fetchFrmsf();
+        } catch (e) {
+          const statusEl = document.getElementById("fsStatus");
+          statusEl.textContent = `Auto load failed; you can upload manually: ${e && e.message ? e.message : e}`;
+          window.frmsf = "";
+        }
+        loadViewerScript();
+      });
+    })();
+  </script>
+</head>
+<body>
+  <main class="detail">
+    <div class="fs-shell">
+      <div class="fs-head">
+        <span class="fs-pill">FermiSurfer Render</span>
+        <span class="fs-info">Material: <strong id="fsMatId">-</strong></span>
+        <span class="fs-info">Bands: <strong id="fsBands">-</strong></span>
+        <span class="fs-info">Iso: <strong id="fsIso">-</strong></span>
+        <span class="fs-status" id="fsStatus">Preparing...</span>
+      </div>
+
+      <div class="fs-toolbar">
+        <label style="color:#cbd5e1;">Load BXSF/FRMSF manually: <input type="file" id="inputfile" name="inputfile" onchange="read_file();"></label>
+        <button type="button" onclick="update_now && update_now();">Redraw</button>
+      </div>
+
+      <div class="fs-modern"></div>
+
+      <div class="fs-wrap">
+        <canvas id="glcanvas" width="880" height="620"></canvas>
+      </div>
+
+      <!-- 兼容 fermisurfer.js 的隐藏表单，保持原始 ID/名称 -->
+      <div class="fs-hidden">
+        <input type="text" id="width" value="880">
+        <input type="text" id="height" value="620">
+        <input type="number" name="linewidth" id="linewidth" value="2.4" step="0.1" min="0">
+        <input type="checkbox" name="ongamma" id="ongamma" value="ongamma" checked>
+
+        <input type="number" name="sectionv0" id="sectionv0" value="0">
+        <input type="number" name="sectionv1" id="sectionv1" value="0">
+        <input type="number" name="sectionv2" id="sectionv2" value="1">
+
+        <input type="number" name="equatorv0" id="equatorv0" value="0">
+        <input type="number" name="equatorv1" id="equatorv1" value="0">
+        <input type="number" name="equatorv2" id="equatorv2" value="1">
+
+        <input type="number" name="interpol" id="interpol" value="1" step="1" min="1">
+        <input type="number" name="fermienergy" id="fermienergy" value="0.0">
+        <input type="number" name="scalemin" id="scalemin" value="">
+        <input type="number" name="scalemax" id="scalemax" value="">
+
+        <form id="tetrahedron">
+          <input type="radio" name="tetrahedron" value="0" checked>
+          <input type="radio" name="tetrahedron" value="1">
+          <input type="radio" name="tetrahedron" value="2">
+          <input type="radio" name="tetrahedron" value="3">
+          <input type="radio" name="tetrahedron" value="4">
+          <input type="radio" name="tetrahedron" value="5">
+          <input type="radio" name="tetrahedron" value="6">
+          <input type="radio" name="tetrahedron" value="7">
+          <input type="radio" name="tetrahedron" value="8">
+          <input type="radio" name="tetrahedron" value="9">
+        </form>
+
+        <form id="colorscalemode">
+          <input type="radio" name="colorscalemode" value="1">
+          <input type="radio" name="colorscalemode" value="2">
+          <input type="radio" name="colorscalemode" value="3">
+          <input type="radio" name="colorscalemode" value="4" checked>
+        </form>
+
+        <form id="brillouinzone">
+          <input type="radio" name="brillouinzone" value="1" checked>
+          <input type="radio" name="brillouinzone" value="-1">
+        </form>
+
+        <form id="stereogram">
+          <input type="radio" name="stereogram" value="1" checked>
+          <input type="radio" name="stereogram" value="2">
+          <input type="radio" name="stereogram" value="3">
+        </form>
+
+        <form id="mousedrag">
+          <input type="radio" name="mousedrag" value="1" checked>
+          <input type="radio" name="mousedrag" value="2">
+          <input type="radio" name="mousedrag" value="3">
+        </form>
+
+        <input type="number" name="bznumber1" id="bznumber0" value="1">
+        <input type="number" name="bznumber2" id="bznumber1" value="1">
+        <input type="number" name="bznumber3" id="bznumber2" value="1">
+
+        <input type="number" name="backgraoundr" id="backgraoundr" value="1" step="0.1" min="0" max="1">
+        <input type="number" name="backgraoundg" id="backgraoundg" value="1" step="0.1" min="0" max="1">
+        <input type="number" name="backgraoundb" id="backgraoundb" value="1" step="0.1" min="0" max="1">
+
+        <input type="number" name="rotatex" id="rotatex" value="0">
+        <input type="number" name="rotatey" id="rotatey" value="0">
+        <input type="number" name="rotatez" id="rotatez" value="0">
+        <input type="number" name="scale" id="scale" value="1" step="0.1" min="0">
+        <input type="number" name="positionx" id="positionx" value="0">
+        <input type="number" name="positiony" id="positiony" value="0">
+
+        <input type="checkbox" name="colorbar" id="colorbar" value="colorbar" checked>
+        <input type="checkbox" name="equator" id="equator" value="equator">
+        <input type="checkbox" name="nodalline" id="nodalline" value="nodalline">
+        <input type="checkbox" name="section" id="section" value="section">
+
+        <form id="lighting">
+          <input type="radio" name="mousedrag" value="1.0" checked>
+          <input type="radio" name="mousedrag" value="-1.0">
+          <input type="radio" name="mousedrag" value="1.0">
+        </form>
+
+        <form id="barcolor">
+          <input type="radio" name="mousedrag" value="rgb" checked>
+          <input type="radio" name="mousedrag" value="cmy">
+          <input type="radio" name="mousedrag" value="mcy">
+        </form>
+
+        <input type="button" value="Section file">
+        <input type="number" name="band" id="band" value="0">
+        <pre id="log"></pre>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

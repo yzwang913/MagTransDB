@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MagTransDB</title>
+    <link rel="icon" href="static/assets/magtransdb-logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="static/styles.css?v=logo1">
+    <script>window.APP_BASE_URL = __APP_BASE_URL_JSON__;</script>
+    <script src="static/base-url.js"></script>
+  </head>
+  <body>
+    <main class="landing">
+      <div class="hero hero-pt">
+        <div class="brand">
+          <img class="site-logo site-logo-landing" src="static/assets/magtransdb-logo.svg" alt="MagTransDB">
+        </div>
+        <div class="subtitle">Search by chemistry: formula, only elements, or at-least elements</div>
+        <div class="search-modes" role="tablist">
+          <button type="button" class="mode-btn active" data-mode="at_least_elements">At Least Elements</button>
+          <button type="button" class="mode-btn" data-mode="only_elements">Only Elements</button>
+          <button type="button" class="mode-btn" data-mode="formula">Formula</button>
+        </div>
+        <div class="search-bar large">
+          <input id="searchInput" type="text" placeholder="Search formula (press Enter)" autofocus />
+          <button id="searchBtn">Search</button>
+        </div>
+
+        <section class="pt-shell">
+          <div class="pt-header">Build formula from elements</div>
+          <div class="pt-subtitle">Click elements to compose a formula; matching materials update automatically.</div>
+          <div class="pt-grid-wrap">
+            <div id="ptGrid" class="pt-grid"></div>
+          </div>
+          <div id="ptSelected" class="pt-selected">Selected elements: –</div>
+        </section>
+
+        <div id="resultsShell" class="results-shell"></div>
+      </div>
+    </main>
+
+    <script src="static/landing.js"></script>
+  </body>
+  </html>

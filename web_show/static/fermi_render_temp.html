@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Fermi Static Render</title>
+  <style>
+    html, body { margin:0; padding:0; background:#ffffff; }
+    canvas { display:block; background:#ffffff; }
+    .fs-hidden{ display:none; }
+  </style>
+  <script>window.APP_BASE_URL = __APP_BASE_URL_JSON__;</script>
+  <script src="base-url.js"></script>
+  <script src="vendor/gl-matrix-min.js"></script>
+</head>
+<body>
+
+  <div id="status" style="position:fixed;left:8px;top:8px;font:12px monospace;color:#000;z-index:10;"></div>
+  <script>
+    window.onerror = function(msg, url, line, col, err) {
+      const s = document.getElementById('status');
+      if (s) s.textContent = 'ERR: ' + msg + ' @' + line + ':' + col;
+    };
+  </script>
+  <canvas id="glcanvas" width="900" height="900"></canvas>
+  <div class="fs-hidden">
+    <input type="text" id="width" value="900">
+    <input type="text" id="height" value="900">
+    <input type="number" name="linewidth" id="linewidth" value="1.0" step="0.1" min="0">
+    <input type="checkbox" name="ongamma" id="ongamma" value="ongamma" checked>
+
+    <input type="number" name="sectionv0" id="sectionv0" value="0">
+    <input type="number" name="sectionv1" id="sectionv1" value="0">
+    <input type="number" name="sectionv2" id="sectionv2" value="1">
+
+    <input type="number" name="equatorv0" id="equatorv0" value="0">
+    <input type="number" name="equatorv1" id="equatorv1" value="0">
+    <input type="number" name="equatorv2" id="equatorv2" value="1">
+
+    <input type="number" name="interpol" id="interpol" value="1" step="1" min="1">
+    <input type="number" name="fermienergy" id="fermienergy" value="0.0">
+    <input type="number" name="scalemin" id="scalemin" value="">
+    <input type="number" name="scalemax" id="scalemax" value="">
+
+    <input type="number" name="bznumber0" id="bznumber0" value="1">
+    <input type="number" name="bznumber1" id="bznumber1" value="1">
+    <input type="number" name="bznumber2" id="bznumber2" value="1">
+
+    <form id="tetrahedron">
+      <input type="radio" name="tetrahedron" value="0" checked>
+      <input type="radio" name="tetrahedron" value="1">
+      <input type="radio" name="tetrahedron" value="2">
+      <input type="radio" name="tetrahedron" value="3">
+      <input type="radio" name="tetrahedron" value="4">
+      <input type="radio" name="tetrahedron" value="5">
+      <input type="radio" name="tetrahedron" value="6">
+      <input type="radio" name="tetrahedron" value="7">
+      <input type="radio" name="tetrahedron" value="8">
+      <input type="radio" name="tetrahedron" value="9">
+    </form>
+
+    <form id="colorscalemode">
+      <input type="radio" name="colorscalemode" value="1">
+      <input type="radio" name="colorscalemode" value="2">
+      <input type="radio" name="colorscalemode" value="3">
+      <input type="radio" name="colorscalemode" value="4" checked>
+    </form>
+
+    <form id="brillouinzone">
+      <input type="radio" name="brillouinzone" value="1" checked>
+      <input type="radio" name="brillouinzone" value="-1">
+    </form>
+
+    <form id="stereogram">
+      <input type="radio" name="stereogram" value="1" checked>
+      <input type="radio" name="stereogram" value="2">
+      <input type="radio" name="stereogram" value="3">
+    </form>
+
+    <form id="mousedrag">
+      <input type="radio" name="mousedrag" value="1" checked>
+      <input type="radio" name="mousedrag" value="2">
+      <input type="radio" name="mousedrag" value="3">
+    </form>
+
+    <form id="barcolor">
+      <input type="radio" name="barcolor" value="1" checked>
+      <input type="radio" name="barcolor" value="2">
+      <input type="radio" name="barcolor" value="3">
+      <input type="radio" name="barcolor" value="4">
+    </form>
+
+    <form id="lighting">
+      <input type="radio" name="lighting" value="1" checked>
+      <input type="radio" name="lighting" value="2">
+      <input type="radio" name="lighting" value="3">
+    </form>
+
+    <input type="checkbox" name="section" id="section" value="section">
+    <input type="checkbox" name="equator" id="equator" value="equator">
+    <input type="checkbox" name="colorbar" id="colorbar" value="colorbar">
+    <input type="checkbox" name="nodalline" id="nodalline" value="nodalline">
+
+    <input type="number" name="backgraoundr" id="backgraoundr" value="1">
+    <input type="number" name="backgraoundg" id="backgraoundg" value="1">
+    <input type="number" name="backgraoundb" id="backgraoundb" value="1">
+    <input type="number" name="linecolorr" id="linecolorr" value="0.2">
+    <input type="number" name="linecolorg" id="linecolorg" value="0.4">
+    <input type="number" name="linecolorb" id="linecolorb" value="1">
+
+    <input type="number" name="scale" id="scale" value="1.0">
+    <input type="number" name="positionx" id="positionx" value="0.0">
+    <input type="number" name="positiony" id="positiony" value="0.0">
+    <input type="number" name="rotatex" id="rotatex" value="25.0">
+    <input type="number" name="rotatey" id="rotatey" value="35.0">
+    <input type="number" name="rotatez" id="rotatez" value="0.0">
+  </div>
+
+  <script>
+    window.frmsf = "";
+    const params = new URLSearchParams(location.search);
+    const matId = params.get("id") || "";
+    const dataset = params.get("dataset") || "soc";
+    const base = dataset === "nosoc" ? appUrl("/api/fermi_nosoc") : appUrl("/api/fermi");
+
+    async function waitReady(timeoutMs = 8000) {
+      const end = Date.now() + timeoutMs;
+      while (Date.now() < end) {
+        if (typeof read_from_text === "function") return;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      throw new Error("FermiSurfer not ready");
+    }
+
+    async function render() {
+      if (!matId) return;
+      const res = await fetch(`${base}/${encodeURIComponent(matId)}/frmsf`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      window.frmsf = await res.text();
+      await waitReady();
+      const data = window.frmsf.replace(/\n/g, " ").trim().split(/\s+/);
+      read_from_text(data);
+      if (typeof update_efermi === "function") update_efermi();
+      if (typeof update_now === "function") update_now();
+      setTimeout(() => { window.__render_done = true; }, 1200);
+    }
+
+    window.addEventListener("load", () => {
+      render().catch(() => { window.__render_done = true; });
+    });
+  </script>
+  <script src="vendor/fermisurfer.js"></script>
+</body>
+</html>

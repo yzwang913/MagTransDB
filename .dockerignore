@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+__pycache__/
+*.py[cod]
+*.log
+*.bak*
+backups/
+logs/
+id.txt
+Lattice/
+MR/
+Band/
+fermi_surface/
+soc_fermi_surface/
+wosoc_fermi_surface/
+download/

@@ -1,0 +1,30 @@
+services:
+  magtransdb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${IMAGE_NAME:-magtransdb:local}
+    restart: unless-stopped
+    environment:
+      BASE_URL: ${BASE_URL:-}
+      DATA_ROOT: /data
+      TMP_DIR: /app-tmp
+    volumes:
+      - ${DATA_ROOT_HOST:-/data/work/cmpdc/mrht/MR_HT_web_show}:/data:ro
+      - magtransdb_tmp:/app-tmp
+    ports:
+      - ${HOST_BIND:-127.0.0.1}:${HOST_PORT:-2000}:1999
+    read_only: true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1999/api/health', timeout=10)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  magtransdb_tmp:

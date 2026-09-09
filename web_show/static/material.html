@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MagTransDB Material Detail</title>
+    <link rel="icon" href="../static/assets/magtransdb-logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../static/styles.css?v=amplitude-clarity1">
+    <script>window.APP_BASE_URL = __APP_BASE_URL_JSON__;</script>
+    <script src="../static/base-url.js"></script>
+    <script src="../static/vendor/three.min.js"></script>
+    <script src="../static/vendor/gl-matrix-min.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <a class="logo-link" href="../" aria-label="MagTransDB home">
+          <img class="site-logo site-logo-header" src="../static/assets/magtransdb-logo.svg" alt="MagTransDB">
+        </a>
+      </div>
+      <div class="search-bar">
+        <div class="quick-search-wrap">
+          <input id="quickSearch" type="text" placeholder="Quick jump: formula + space group (e.g. Cu 225)" autocomplete="off" />
+          <div id="quickSearchMenu" class="quick-search-menu is-hidden" role="listbox" aria-label="Quick jump suggestions"></div>
+        </div>
+        <button id="quickBtn">Go</button>
+      </div>
+    </header>
+
+    <main class="detail">
+      <div id="materialHeader" class="mat-header"></div>
+      <div class="content-layout">
+        <nav class="side-menu">
+          <div class="menu-title">Contents</div>
+          <a href="#cellBlock">Structure</a>
+          <a href="#bandBlock">Band Structure</a>
+          <a href="#mrBlock">MR <span class="menu-amp">&amp;</span> Hall</a>
+          <a href="#mrPolarBlock">Anisotropy Plots</a>
+          <a href="#mrFourierBlock">Anisotropy Fingerprint</a>
+          <a href="#fermiBlock">Fermi Surface</a>
+        </nav>
+        <div class="content-main">
+      <div class="viewers" id="cellBlock">
+        <div class="viewer-wrap">
+          <div class="viewer-title" id="cellViewerTitle">Structure</div>
+          <div class="viewer-controls">
+            <label>Cell type:
+              <select id="cellType">
+                <option value="primitive">Primitive Cell</option>
+                <option value="conventional" selected>Conventional Cell</option>
+              </select>
+            </label>
+            <label style="margin-left:12px">Supercell:
+              <select id="cellSize">
+                <option value="1" selected>1×1×1</option>
+                <option value="2">2×2×2</option>
+                <option value="3">3×3×3</option>
+              </select>
+            </label>
+            <label style="margin-left:12px"><input type="checkbox" id="cellShowBonds"> Show bonds</label>
+            <button id="cellDownloadPoscar" type="button" class="cell-poscar-download" style="margin-left:10px;">
+              Download POSCAR
+            </button>
+            <button id="cellDownloadSvg" type="button" class="cell-poscar-download" style="margin-left:10px;">
+              Download SVG
+            </button>
+            <div class="cell-rotation-controls" aria-label="Cell rotation controls">
+              <span>Rotation:</span>
+              <label>Rx <input id="cellRotX" type="number" step="1" value="0" inputmode="decimal"></label>
+              <label>Ry <input id="cellRotY" type="number" step="1" value="0" inputmode="decimal"></label>
+              <label>Rz <input id="cellRotZ" type="number" step="1" value="0" inputmode="decimal"></label>
+              <button id="cellApplyRotation" type="button">Apply</button>
+              <button id="cellResetRotation" type="button">Reset</button>
+            </div>
+          </div>
+          <div class="viewer-row">
+            <div class="viewer-main">
+              <div id="viewerCell" class="viewer"></div>
+            </div>
+            <div class="viewer-side">
+              <div id="cellInfo" class="info small lattice-side-card"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="block" id="bandBlock" style="margin-top:12px; display:none;">
+        <div class="block-title">Band Structure</div>
+        <div class="band-controls">
+          <div class="band-tabs">
+            <button class="band-tab active" data-variant="soc">SOC</button>
+            <button class="band-tab" data-variant="nosoc">without SOC</button>
+          </div>
+          <div class="band-meta">
+            <span id="bandVariantBadge" class="band-badge band-badge-primary">SOC</span>
+            <span class="band-badge band-badge-soft">Drag the right Brillouin zone to rotate</span>
+          </div>
+          <div id="bandHint" class="band-hint"></div>
+        </div>
+        <div class="band-canvas-wrap">
+          <div class="band-panel band-plot">
+            <div class="band-panel-head">
+              <div class="band-panel-title-wrap">
+                <div class="band-panel-title">Electronic bands</div>
+              </div>
+              <button id="bandDownloadSvg" type="button" class="band-panel-download">SVG</button>
+            </div>
+            <canvas id="bandCanvas"></canvas>
+          </div>
+          <div class="band-panel band-bz">
+            <div class="band-panel-head">
+              <div class="band-panel-title-wrap">
+                <div class="band-panel-title">Brillouin zone path</div>
+              </div>
+              <button id="bandBzDownloadSvg" type="button" class="band-panel-download">SVG</button>
+            </div>
+            <canvas id="bandBzCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="block" id="mrBlock" style="margin-top:12px; display:none;">
+        <div class="block-title mr-block-title">
+          <span>MR <span class="menu-amp">&amp;</span> Hall</span>
+        </div>
+        <div class="mr-controls">
+          <div class="row hint" id="mrHint"></div>
+        </div>
+
+        <div class="mr-compare-grid">
+          <section class="mr-compare-card" id="mrCompareAngleCard">
+            <div class="mr-card-head">
+              <h3>Comparison A: fixed temperature, compare different angles</h3>
+              <span>By angle</span>
+            </div>
+            <div class="mr-card-body">
+              <div class="mr-card-main">
+                <div class="mr-card-controls">
+                  <label class="mr-field">
+                    <span>Plane</span>
+                    <select id="mrSurfaceA"></select>
+                  </label>
+                  <label class="mr-field">
+                    <span>Fermi level (meV)</span>
+                    <select id="mrMuA"></select>
+                  </label>
+                  <label class="mr-field">
+                    <span>Component</span>
+                    <div class="pretty-select-wrap" data-select="mrCompA">
+                      <select id="mrCompA" class="pretty-select-native">
+                        <option value="xx">xx</option>
+                        <option value="xy">xy</option>
+                        <option value="xz">xz</option>
+                        <option value="yx">yx</option>
+                        <option value="yy">yy</option>
+                        <option value="yz">yz</option>
+                        <option value="zx">zx</option>
+                        <option value="zy">zy</option>
+                        <option value="zz" selected>zz</option>
+                      </select>
+                      <button id="mrCompPrettyA" type="button" class="pretty-select-trigger" aria-haspopup="listbox" aria-expanded="false"></button>
+                      <div id="mrCompMenuA" class="pretty-select-menu" role="listbox" aria-label="Comparison A component"></div>
+                    </div>
+                  </label>
+                  <label class="mr-field mr-field-temp">
+                    <span>Temperature</span>
+                    <select id="mrFixedTemp"></select>
+                  </label>
+                  <label class="mr-field mr-field-wide">
+                    <span>Angle</span>
+                    <select id="mrAngle" multiple class="mr-native-multi" aria-label="Angles"></select>
+                    <div class="mr-multi-picker" id="mrAnglePicker"></div>
+                  </label>
+                </div>
+                <div class="mr-axis-zoom" aria-label="Comparison A axis zoom controls">
+                  <label>
+                    <span>X scale</span>
+                    <input id="mrZoomXA" type="range" min="1" max="20" step="0.1" value="1">
+                    <output id="mrZoomXAValue">1.0x</output>
+                  </label>
+                  <label>
+                    <span>Y scale</span>
+                    <input id="mrZoomYA" type="range" min="1" max="20" step="0.1" value="1">
+                    <output id="mrZoomYAValue">1.0x</output>
+                  </label>
+                </div>
+                <div class="mr-card-plots">
+                  <div class="plot-wrap mr-mr-wrap" id="mrPlotMRWrapA">
+                    <div class="plot-title">MR curve</div>
+                    <canvas id="mrPlotMRA"></canvas>
+                  </div>
+                  <div class="plot-wrap">
+                    <div class="plot-title"><span>ρ</span><sub>total</sub> curve</div>
+                    <canvas id="mrPlotRhoA"></canvas>
+                  </div>
+                  <div class="plot-wrap">
+                    <div class="plot-title"><span>σ</span><sub>total</sub> curve</div>
+                    <canvas id="mrPlotSigmaA"></canvas>
+                  </div>
+                </div>
+                <div class="mr-card-status" id="mrStatusA"></div>
+              </div>
+              <aside class="mr-cell-card">
+                <div class="mr-cell-head">
+                  <div>
+                    <div class="mr-cell-title">Conventional Cell</div>
+                    <div class="mr-cell-subtitle" id="mrCellReadoutA">Comparison A direction</div>
+                  </div>
+                  <span class="mr-cell-badge">Plane + B</span>
+                </div>
+                <div id="mrCellViewerA" class="mr-cell-viewer"></div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="mr-compare-card" id="mrCompareTempCard">
+            <div class="mr-card-head">
+              <h3>Comparison B: fixed angle, compare different temperatures</h3>
+              <span>By temperature</span>
+            </div>
+            <div class="mr-card-body">
+              <div class="mr-card-main">
+                <div class="mr-card-controls">
+                  <label class="mr-field">
+                    <span>Plane</span>
+                    <select id="mrSurfaceB"></select>
+                  </label>
+                  <label class="mr-field">
+                    <span>Fermi level (meV)</span>
+                    <select id="mrMuB"></select>
+                  </label>
+                  <label class="mr-field">
+                    <span>Component</span>
+                    <div class="pretty-select-wrap" data-select="mrCompB">
+                      <select id="mrCompB" class="pretty-select-native">
+                        <option value="xx">xx</option>
+                        <option value="xy">xy</option>
+                        <option value="xz">xz</option>
+                        <option value="yx">yx</option>
+                        <option value="yy">yy</option>
+                        <option value="yz">yz</option>
+                        <option value="zx">zx</option>
+                        <option value="zy">zy</option>
+                        <option value="zz" selected>zz</option>
+                      </select>
+                      <button id="mrCompPrettyB" type="button" class="pretty-select-trigger" aria-haspopup="listbox" aria-expanded="false"></button>
+                      <div id="mrCompMenuB" class="pretty-select-menu" role="listbox" aria-label="Comparison B component"></div>
+                    </div>
+                  </label>
+                  <label class="mr-field mr-field-angle">
+                    <span>Angle</span>
+                    <select id="mrFixedAngle"></select>
+                  </label>
+                  <label class="mr-field mr-field-wide">
+                    <span>Temperature</span>
+                    <select id="mrTemp" multiple class="mr-native-multi" aria-label="Temperatures"></select>
+                    <div class="mr-multi-picker" id="mrTempPicker"></div>
+                  </label>
+                </div>
+                <div class="mr-axis-zoom" aria-label="Comparison B axis zoom controls">
+                  <label>
+                    <span>X scale</span>
+                    <input id="mrZoomXB" type="range" min="1" max="20" step="0.1" value="1">
+                    <output id="mrZoomXBValue">1.0x</output>
+                  </label>
+                  <label>
+                    <span>Y scale</span>
+                    <input id="mrZoomYB" type="range" min="1" max="20" step="0.1" value="1">
+                    <output id="mrZoomYBValue">1.0x</output>
+                  </label>
+                </div>
+                <div class="mr-card-plots">
+                  <div class="plot-wrap mr-mr-wrap" id="mrPlotMRWrapB">
+                    <div class="plot-title">MR curve</div>
+                    <canvas id="mrPlotMRB"></canvas>
+                  </div>
+                  <div class="plot-wrap">
+                    <div class="plot-title"><span>ρ</span><sub>total</sub> curve</div>
+                    <canvas id="mrPlotRhoB"></canvas>
+                  </div>
+                  <div class="plot-wrap">
+                    <div class="plot-title"><span>σ</span><sub>total</sub> curve</div>
+                    <canvas id="mrPlotSigmaB"></canvas>
+                  </div>
+                </div>
+                <div class="mr-card-status" id="mrStatusB"></div>
+              </div>
+              <aside class="mr-cell-card">
+                <div class="mr-cell-head">
+                  <div>
+                    <div class="mr-cell-title">Conventional Cell</div>
+                    <div class="mr-cell-subtitle" id="mrCellReadoutB">Comparison B direction</div>
+                  </div>
+                  <span class="mr-cell-badge">Plane + B</span>
+                </div>
+                <div id="mrCellViewerB" class="mr-cell-viewer"></div>
+              </aside>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="block" id="mrPolarBlock" style="margin-top:12px; display:none;">
+        <div class="block-title mr-block-title">
+          <span>Anisotropy Plots</span>
+        </div>
+        <div class="mr-polar-controls">
+          <div class="row">
+            <label>Plane:</label>
+            <select id="mrPolarSurface"></select>
+            <label>Component:</label>
+            <div class="pretty-select-wrap" data-select="mrPolarComp">
+              <select id="mrPolarComp" class="pretty-select-native">
+                <option value="xx">xx</option>
+                <option value="xy">xy</option>
+                <option value="xz">xz</option>
+                <option value="yx">yx</option>
+                <option value="yy">yy</option>
+                <option value="yz">yz</option>
+                <option value="zx">zx</option>
+                <option value="zy">zy</option>
+                <option value="zz" selected>zz</option>
+              </select>
+              <button id="mrPolarCompPretty" type="button" class="pretty-select-trigger" aria-haspopup="listbox" aria-expanded="false"></button>
+              <div id="mrPolarCompMenu" class="pretty-select-menu" role="listbox" aria-label="Polar component"></div>
+            </div>
+            <span id="mrPolarZeroDef" class="mr-polar-zero"></span>
+            <span id="mrPolarAmrValue" class="mr-polar-zero"></span>
+          </div>
+          <div class="row hint" id="mrPolarHint"></div>
+        </div>
+        <div class="mr-polar-view">
+          <div id="mrPolarGrid" class="mr-subplot-grid"></div>
+        </div>
+        <div class="mr-cart-view" id="mrCartWrap">
+          <div id="mrCartGrid" class="mr-subplot-grid"></div>
+        </div>
+      </div>
+
+      <div class="block" id="mrFourierBlock" style="margin-top:12px; display:none;">
+        <div class="block-title mr-block-title">
+          <span>Anisotropy Fingerprint</span>
+        </div>
+        <div class="mr-fourier-formulas">
+          <div class="eq"><span class="eq-label">Fourier:</span> \( (\rho\tau)(\phi)=(\rho\tau)_{0}+\sum_{n=1}^{8}\left[a_{n}\cos(n\phi)+b_{n}\sin(n\phi)\right] \)</div>
+          <div class="eq"><span class="eq-label">Amplitude:</span> \( A_{n}=\sqrt{a_{n}^{2}+b_{n}^{2}},\quad R_{n}=\frac{A_{n}}{\left|(\rho\tau)_{0}\right|} \)</div>
+          <div class="eq"><span class="eq-label">AMR:</span> \( \mathrm{AMR}=\frac{(\rho\tau)_{\max}-(\rho\tau)_{\min}}{(\rho\tau)_{\min}} \)</div>
+          <div class="eq"><span class="eq-label">RMS:</span> \( A_{\mathrm{rms}}=\frac{\sqrt{\frac{1}{N}\sum_{i=1}^{N}\left[(\rho\tau)(\phi_i)-(\rho\tau)_{0}\right]^{2}}}{\left|(\rho\tau)_{0}\right|} \)</div>
+        </div>
+        <div class="mr-fourier-controls">
+          <div class="row">
+            <label>Plane:</label>
+            <select id="mrFourierSurface"></select>
+            <label>Component:</label>
+            <select id="mrFourierComp">
+              <option value="xx">xx</option>
+              <option value="yy">yy</option>
+              <option value="zz" selected>zz</option>
+            </select>
+            <label>\(B\tau\):</label>
+            <select id="mrFourierBtau"></select>
+            <span id="mrFourierHint" class="hint"></span>
+          </div>
+        </div>
+        <div class="mr-fourier-metrics">
+          <article class="card">
+            <div class="k">\( (\rho\tau)_0 \)</div>
+            <div class="v" id="mrFourierRho0">-</div>
+            <div class="small">\( \langle \rho\tau \rangle_{\phi} \)</div>
+          </article>
+          <article class="card">
+            <div class="k">\( \mathrm{AMR} \)</div>
+            <div class="v" id="mrFourierAmr">-</div>
+            <div class="small">\( \frac{(\rho\tau)_{\max}-(\rho\tau)_{\min}}{(\rho\tau)_{\min}} \)</div>
+          </article>
+          <article class="card">
+            <div class="k">\( A_{\mathrm{rms}} \)</div>
+            <div class="v" id="mrFourierRms">-</div>
+            <div class="small">\( \frac{\sqrt{\frac{1}{N}\sum_{i=1}^{N}\left[(\rho\tau)(\phi_i)-(\rho\tau)_0\right]^2}}{\left|(\rho\tau)_0\right|} \)</div>
+          </article>
+          <article class="card">
+            <div class="k">Dominant harmonic</div>
+            <div class="v" id="mrFourierDom">-</div>
+            <div class="small" id="mrFourierDomRatio">-</div>
+            <div class="small">\( n^{*} = \arg\max_{n} R_n \)</div>
+          </article>
+        </div>
+        <div class="mr-fourier-viz-grid">
+          <div class="viz-card">
+            <div class="viz-title viz-title-row">
+              <span>Polar fingerprint (reconstructed)</span>
+              <button id="mrFourierPolarSvgBtn" class="mini-svg-btn" type="button">SVG</button>
+            </div>
+            <canvas id="mrFourierPolarCanvas"></canvas>
+          </div>
+          <div class="viz-card">
+            <div class="viz-title">Harmonic spectrum \( R_n = A_n / \left|(\rho\tau)_0\right| \)</div>
+            <div id="mrFourierBars" class="mr-fourier-bars"></div>
+          </div>
+        </div>
+        <div class="mr-fourier-table-wrap">
+          <table class="mr-fourier-table">
+            <thead>
+              <tr>
+                <th>\(B\tau\)</th>
+                <th>\((\rho\tau)_0\)</th>
+                <th>\(\mathrm{AMR}\)</th>
+                <th>\(A_{\mathrm{rms}}\)</th>
+                <th>\(n^{*}\)</th>
+                <th>\(R_{n^{*}}\)</th>
+              </tr>
+            </thead>
+            <tbody id="mrFourierRows"></tbody>
+          </table>
+        </div>
+        <div class="mr-fourier-similar-wrap">
+          <div class="similar-title">Similar Polar Fingerprints</div>
+          <div class="similar-hint" id="mrFourierSimilarHint"></div>
+          <div class="mr-fourier-similar-list" id="mrFourierSimilarList"></div>
+        </div>
+        <div class="mr-fourier-similar-wrap">
+          <div class="similar-title">Consistent Similarity Across All Planes and Components</div>
+          <div class="similar-hint" id="mrFourierSimilarAllHint"></div>
+          <div class="mr-fourier-similar-list" id="mrFourierSimilarAllList"></div>
+        </div>
+      </div>
+
+      <div class="block" id="fermiBlock" style="margin-top:12px; display:none;">
+        <div class="block-title mr-block-title">
+          <span>Fermi Surface</span>
+        </div>
+        <div class="fermi-dataset-row">
+          <label>Dataset:
+            <select id="fermiDataset">
+              <option value="soc" selected>SOC</option>
+              <option value="nosoc">without SOC</option>
+            </select>
+          </label>
+          <button id="fermiLoadBtn" type="button" class="fermi-load-button">Load Fermi surface</button>
+          <button id="fermiDownloadBxsf" type="button" class="btn-secondary" style="margin-left:10px; display:none;">
+            Download FS3D.bxsf
+          </button>
+        </div>
+        <div class="hint" id="fermiInfo" style="margin-bottom:8px;"></div>
+
+        <div class="fermi-ws-layout">
+          <div class="fermi-ws-stage-card">
+            <div class="fermi-ws-stage-head">
+              <div class="fermi-ws-stage-title" id="fermiViewerTitle">First-Brillouin-zone Fermi surface</div>
+              <div class="fermi-ws-head-actions">
+                <div class="fermi-ws-legend" id="fermiLegend">
+                  <span class="fermi-ws-legend-empty">No bands selected</span>
+                </div>
+                <button id="fermiDownloadStage" type="button" class="fermi-ws-download">SVG</button>
+              </div>
+            </div>
+            <div class="fermi-ws-stage" id="fermiSceneRoot">
+              <div id="fermiLoading" class="fermi-overlay fs-loading" style="display:none;">Loading Fermi surface...</div>
+              <div id="fermiSdhHover" class="fermi-sdh-hover" style="display:none;"></div>
+            </div>
+          </div>
+
+          <div class="fermi-ws-section-card">
+            <div class="fermi-ws-section-head">
+              <span>2D Section</span>
+              <button id="fermiDownloadSection" type="button" class="fermi-ws-download">SVG</button>
+            </div>
+            <div class="fermi-ws-section-stage">
+              <canvas id="fermiSectionCanvas"></canvas>
+              <p id="fermiSectionEmpty" class="fermi-ws-section-empty">Enable section to show the 2D cross-section</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="fermi-ws-controls">
+          <div class="fermi-ws-field">
+            <span>Bands</span>
+            <div id="fermiBandPicker" class="fermi-band-picker">
+              <button id="fermiBandPickerBtn" type="button" class="fermi-band-picker-button" aria-haspopup="listbox" aria-expanded="false">
+                <span id="fermiBandPickerLabel">Select bands</span>
+                <span class="fermi-band-picker-chevron" aria-hidden="true"></span>
+              </button>
+              <div id="fermiBandPickerMenu" class="fermi-band-picker-menu is-hidden" role="listbox"></div>
+            </div>
+          </div>
+
+          <label class="fermi-ws-field">
+            <span>Render Quality</span>
+            <select id="fermiQuality">
+              <option value="44">Standard</option>
+              <option value="68">Balanced</option>
+              <option value="88" selected>Fine</option>
+              <option value="112">Ultra</option>
+            </select>
+          </label>
+
+          <div class="fermi-ws-field fermi-ws-energy-panel">
+            <span>Fermi Energy</span>
+            <div class="fermi-ws-energy-row">
+              <input id="fermiIsoNumber" type="number" step="0.01">
+              <button id="fermiIsoReset" type="button">Reset Ef</button>
+            </div>
+            <input id="fermiIsoSlider" type="range">
+            <p id="fermiIsoRange" class="fermi-ws-readout">-</p>
+          </div>
+
+          <div class="fermi-ws-field fermi-ws-section-panel">
+            <span>Section</span>
+            <label class="fermi-ws-section-toggle">
+              <input id="fermiSectionEnabled" type="checkbox" checked>
+              <span>Show Fermi-surface section</span>
+            </label>
+            <div class="fermi-ws-section-vector">
+              <label>
+                <span>b1</span>
+                <input id="fermiSectionN1" type="number" step="0.1" value="0">
+              </label>
+              <label>
+                <span>b2</span>
+                <input id="fermiSectionN2" type="number" step="0.1" value="0">
+              </label>
+              <label>
+                <span>b3</span>
+                <input id="fermiSectionN3" type="number" step="0.1" value="1">
+              </label>
+            </div>
+            <label class="fermi-ws-section-offset">
+              <span>Plane Position</span>
+              <input id="fermiSectionOffset" type="range" min="-1" max="1" step="0.01" value="0">
+            </label>
+            <p id="fermiSectionReadout" class="fermi-ws-readout">Central plane</p>
+          </div>
+
+          <div class="fermi-ws-field fermi-ws-sdh-panel">
+            <span>SdH</span>
+            <p class="fermi-sdh-copy">
+              Set magnetic-field direction and scan extremal closed orbits on current visible bands.
+            </p>
+            <div class="fermi-ws-section-vector">
+              <label>
+                <span>B1</span>
+                <input id="fermiSdhN1" type="number" step="0.1" value="0">
+              </label>
+              <label>
+                <span>B2</span>
+                <input id="fermiSdhN2" type="number" step="0.1" value="0">
+              </label>
+              <label>
+                <span>B3</span>
+                <input id="fermiSdhN3" type="number" step="0.1" value="1">
+              </label>
+            </div>
+            <div class="fermi-sdh-actions">
+              <button id="fermiSdhRun" type="button">Compute SdH orbits</button>
+            </div>
+            <p id="fermiSdhStatus" class="fermi-ws-readout">Not computed</p>
+            <div id="fermiSdhResults" class="fermi-sdh-results"></div>
+          </div>
+
+          <div class="fermi-ws-stats">
+            <div class="fermi-ws-stat">
+              <span>Fermi Energy</span>
+              <strong id="fermiStatEnergy">-</strong>
+            </div>
+            <div class="fermi-ws-stat">
+              <span>Visible Bands</span>
+              <strong id="fermiStatBands">-</strong>
+            </div>
+            <div class="fermi-ws-stat">
+              <span>Source Grid</span>
+              <strong id="fermiStatGrid">-</strong>
+            </div>
+            <div class="fermi-ws-stat">
+              <span>Render Grid</span>
+              <strong id="fermiStatRender">-</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div> <!-- content-main -->
+      </div> <!-- content-layout -->
+
+    </main>
+
+    <footer>
+      <span>SG is the space group number; drag to rotate, scroll to zoom</span>
+    </footer>
+
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['\\(', '\\)'], ['$', '$']]
+        },
+        svg: {
+          fontCache: 'global'
+        }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script src="../static/viewer.js?v=cu-te-color1"></script>
+    <script src="../static/vendor/OrbitControls.js?v=fs-ws1"></script>
+    <script src="../static/vendor/MarchingCubes.js?v=fs-ws1"></script>
+    <!-- bump version to ensure latest fermi.js is loaded -->
+    <script src="../static/fermi.js?v=fsurfer54"></script>
+    <script src="../static/material.js?v=mr34"></script>
+    <script src="../static/mr.js?v=mr147-default-btau-10"></script>
+  </body>
+</html>

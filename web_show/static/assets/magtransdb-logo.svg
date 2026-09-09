@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="135 125 1070 610">
+  <title>MagTransDB MTDB monogram logo</title>
+  <desc>Vector logo concept for a magnetotransport database: MTDB monogram with an electron transport path.</desc>
+  <defs>
+    <style>
+      .mark {
+        fill: none;
+        stroke: #0b274a;
+        stroke-width: 22;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .transport {
+        fill: none;
+        stroke: #1f78bd;
+        stroke-width: 12;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .wordmark {
+        fill: #0b274a;
+        font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+        font-size: 88px;
+        font-weight: 500;
+        letter-spacing: 1.5px;
+      }
+    </style>
+  </defs>
+
+  <!-- MTDB monogram -->
+  <g transform="translate(70 32)">
+    <!-- M and T share the top stroke to make the acronym read as one integrated mark. -->
+    <path class="mark" d="
+      M 115 430
+      L 115 205
+      Q 115 176 139 176
+      Q 153 176 162 191
+      L 220 291
+      Q 229 306 241 291
+      L 300 191
+      Q 310 176 329 176
+      L 470 176
+      M 390 176
+      L 390 430
+    "/>
+
+    <!-- D -->
+    <path class="mark" d="
+      M 470 176
+      L 470 430
+      L 610 430
+      Q 735 430 735 303
+      Q 735 176 610 176
+      L 470 176
+    "/>
+
+    <!-- B -->
+    <path class="mark" d="
+      M 795 176
+      L 795 430
+      M 795 176
+      L 888 176
+      Q 958 176 958 244
+      Q 958 303 888 303
+      L 795 303
+      M 795 303
+      L 900 303
+      Q 985 303 985 367
+      Q 985 430 900 430
+      L 795 430
+    "/>
+
+    <!-- Transport path through the monogram -->
+    <path class="transport" d="
+      M 110 312
+      C 215 287, 322 272, 430 302
+      C 518 327, 585 326, 650 304
+      C 735 276, 855 284, 990 262
+    "/>
+
+    <!-- Electron symbol -->
+    <g transform="translate(650 304)">
+      <circle cx="0" cy="0" r="36" fill="#1f78bd"/>
+      <circle cx="0" cy="0" r="36" fill="none" stroke="#1669a8" stroke-width="4"/>
+      <line x1="-16" y1="0" x2="16" y2="0" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+    </g>
+
+    <!-- Wordmark -->
+    <text class="wordmark" x="550" y="600" text-anchor="middle">MagTransDB</text>
+  </g>
+</svg>
