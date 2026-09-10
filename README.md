@@ -1,330 +1,108 @@
 # MagTransDB
 
-MagTransDB 是磁输运高通量计算结果的网页展示程序。本仓库只包含 Flask
-应用、前端资源和 Docker 部署配置，**不包含科学计算数据**。
+MagTransDB 展示磁输运高通量计算结果。本仓库负责 Flask 应用、前端资源、
+`web_show/Dockerfile`、Compose 与业务验证，不包含科学计算数据。
+镜像构建上下文为 `web_show/`；Compose、环境配置和发布脚本保留在仓库根目录。
 
-## 1. 部署结构
+## 生产部署约定
 
-服务器上的数据目录应包含：
+- 公开地址：`https://cmpdc.iphy.ac.cn/mtdb/`，应用名称保留 MagTransDB。
+- Compose project 为 `magtransdb`，service 为 `server`；容器监听 `8000`。
+- 网关内部回源 `magtransdb:8000`，去除 `/mtdb/` 前缀并传递
+  `X-Forwarded-Prefix: /mtdb`；公开 `/mtdb` 应跳转到 `/mtdb/`。
+- 两级网关、`web-gateway` 网络接入、别名注册与数据权限由 ops-knowledge
+  管理。应用 Compose 不维护这些内容。网关注册目标为
+  `project=magtransdb, service=server, alias=magtransdb`。
+- 容器以 root 运行，科学数据继续只读挂载到 `/data`，应用不能通过该挂载修改数据。
 
-```text
-/data/work/cmpdc/mrht/MR_HT_web_show/
-├── Band/
-├── download/
-├── fermi_surface/
-├── Lattice/
-└── MR/
-```
+## 数据与可写目录
 
-推荐把本仓库克隆为数据目录中的独立子目录：
+`DATA_ROOT_HOST` 必须指向已有目录，包含 `Lattice/`、`MR/`、`Band/`、
+`fermi_surface/` 和 `download/`。部署前确认数据目录存在，避免短写法挂载自动创建空目录。
+代码目录可以独立放在 `/home/tnzhu/projects/magtransdb`，不需要放进科学数据目录。
 
-```text
-/data/work/cmpdc/mrht/MR_HT_web_show/
-├── Band/               # 数据，不进入 Git
-├── download/           # 数据，不进入 Git
-├── fermi_surface/      # 数据，不进入 Git
-├── Lattice/            # 数据，不进入 Git
-├── MR/                 # 数据，不进入 Git
-├── web_show/           # 以前同步遗留的目录，可以保留，不会被使用
-└── MagTransDB/         # 从本仓库克隆的部署代码
-```
+当前数据交接基线为 Lattice/Band/fermi_surface/download 各 726 个一致的材料 ID，
+应用隐藏 11 个，预计显示 715 个。这个数量是当前验收基线，不是代码中的硬编码。
 
-不要把仓库直接克隆为已经存在的 `web_show/`，也不要在非空的
-`MR_HT_web_show/` 上直接执行不带目标目录的 `git clone`。
+Gunicorn 心跳临时文件通过 `--worker-tmp-dir /dev/shm` 放到 Docker 的内存文件系统，
+避免心跳文件操作依赖磁盘 I/O。
+下载 ZIP 使用系统临时目录 `/tmp`，位于容器可写层，无需单独挂载临时卷。
+不要把大 ZIP 放入 `/dev/shm`。容器删除后，其可写层中的临时文件也会删除。
 
-## 2. 前置条件
+ZIP 在完整压缩后才开始响应，不会把整个 ZIP 读入内存；支持 HTTP Range。
+Linux 上应用在 `send_file` 打开文件后移除临时路径，响应持有的文件描述符关闭后
+释放磁盘空间。压缩异常会清理文件；进程被强制杀死或主机崩溃时，仍可能留下未完成
+ZIP，需要在无下载任务时清理 `/tmp` 中的残留文件。并发下载会分别生成 ZIP，应预留相应磁盘空间。
+两级网关的响应等待时间须覆盖压缩完成前的等待；实际生产大包的超时与吞吐需联调验收。
 
-部署主机需要：
+## 正式部署命令（由用户安排执行）
 
-- Docker Engine
-- Docker Compose v2，可通过 `docker compose version` 检查
-- 能够访问 Docker Hub，以拉取 `python:3.12-slim`
-- 对数据目录具有读取和目录遍历权限
-- 足够的磁盘空间用于镜像和临时 ZIP 文件
-
-首次构建前建议检查：
+先将已审核的改动合入部署目录，再执行以下命令。需要 Docker Engine 和 Compose v2+，
+并具备拉取基础镜像和 Python 依赖的网络条件。
 
 ```bash
-docker --version
-docker compose version
-test -d /data/work/cmpdc/mrht/MR_HT_web_show/Lattice
-test -d /data/work/cmpdc/mrht/MR_HT_web_show/MR
-test -d /data/work/cmpdc/mrht/MR_HT_web_show/Band
-test -d /data/work/cmpdc/mrht/MR_HT_web_show/fermi_surface
-test -d /data/work/cmpdc/mrht/MR_HT_web_show/download
+cd /home/tnzhu/projects/magtransdb
+# 首次部署时创建；已有配置则编辑它，不覆盖现有设置。
+test -f .env.production || cp .env.example .env.production
 ```
 
-## 3. 克隆和配置
-
-```bash
-cd /data/work/cmpdc/mrht/MR_HT_web_show
-git clone https://github.com/yzwang913/MagTransDB.git MagTransDB
-cd MagTransDB
-cp .env.example .env
-```
-
-编辑 `.env`：
+配置统一由 `.env.production` 加载，与 HSP 一致；该文件不进入 Git：
 
 ```dotenv
-# 根路径部署时留空；子路径部署时填写 /xxx，开头有斜杠，末尾无斜杠。
-BASE_URL=/plausible
-
-# 必须指向包含 Lattice、MR、Band、fermi_surface 和 download 的目录。
+BASE_URL=/mtdb
 DATA_ROOT_HOST=/data/work/cmpdc/mrht/MR_HT_web_show
-
-# Nginx 与 Docker 在同一主机时，建议只监听回环地址。
-HOST_BIND=127.0.0.1
-HOST_PORT=2000
-
-IMAGE_NAME=magtransdb:local
+GUNICORN_CMD_ARGS="--bind 0.0.0.0:8000 --worker-class gthread --workers 2 --threads 4 --worker-tmp-dir /dev/shm --timeout 120 --access-logfile - --error-logfile -"
 ```
 
-## 4. 启动服务
+容器内 `DATA_ROOT=/data` 由 Dockerfile 设置，无需重复配置；ZIP 使用系统临时目录。
+Gunicorn 使用常规端口 8000；保留 `--bind 0.0.0.0:8000`，供网关跨容器访问。
+Gunicorn 参数由 `GUNICORN_CMD_ARGS` 提供；调整进程数、线程数或超时后，运行
+`docker compose --env-file .env.production up -d` 重建容器即可，无需重新构建镜像。
+`--worker-tmp-dir /dev/shm` 将心跳文件与磁盘上的 ZIP 临时文件分开。
+
+发布入口为 `scripts/release.sh`，从根目录 `VERSION` 读取版本（初始 `0.1.0`），
+自动记录 Git revision，拉取基础镜像并构建，然后通过 Compose 后台启动服务。
+与 ARPES/HSP 一致，脚本不等待健康检查；启动后用 `docker compose ps` 查看状态。
 
 ```bash
-docker compose up -d --build
-docker compose ps
-docker compose logs --tail=100 magtransdb
+test -d /data/work/cmpdc/mrht/MR_HT_web_show/Lattice
+./scripts/release.sh
+docker compose --env-file .env.production ps
+docker compose --env-file .env.production logs --tail=100 server
+docker compose --env-file .env.production exec -T server python -c \
+  'import urllib.request; print(urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=10).read().decode())'
 ```
 
-默认情况下，应用只在部署主机的以下地址监听：
+健康响应应包含 `status: "ok"`、`base_url: "/mtdb"`、`count: 715`。
+健康接口只确认应用和索引加载成功，不能代替各科学数据文件的业务验收。
+Compose 默认不发布宿主机端口；诊断在容器内执行，网关使用容器的 `8000` 端口。
+镜像使用 `magtransdb-server:${MAGTRANSDB_VERSION:-dev}`，构建时记录来源与 revision 标签；
+发布脚本自动设置版本标签与 revision，无需手动导出。
+容器重建后的网关网络接入由 ops-knowledge 的注册机制负责。
 
-```text
-http://127.0.0.1:2000
-```
-
-检查应用和数据索引：
+网关就绪后检查：
 
 ```bash
-curl http://127.0.0.1:2000/api/health
+curl --fail -I https://cmpdc.iphy.ac.cn/mtdb/
+curl --fail https://cmpdc.iphy.ac.cn/mtdb/api/health
+curl --fail -I https://cmpdc.iphy.ac.cn/mtdb/static/base-url.js
 ```
 
-正常响应示例：
-
-```json
-{
-  "base_url": "/plausible",
-  "count": 715,
-  "lattice_dir": "/data/Lattice",
-  "status": "ok"
-}
-```
-
-材料数量会随数据更新而变化，不要求始终等于示例中的 `715`。
-
-## 5. 部署在域名子路径
-
-以下配置将网页发布到 `https://example.org/plausible/`。
-
-`.env` 中设置：
-
-```dotenv
-BASE_URL=/plausible
-```
-
-Nginx 配置：
-
-```nginx
-location = /plausible {
-    return 301 /plausible/;
-}
-
-location /plausible/ {
-    proxy_pass http://127.0.0.1:2000/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-Prefix /plausible;
-}
-```
-
-应用 Nginx 配置：
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-验证：
-
-```bash
-curl -I https://example.org/plausible/
-curl https://example.org/plausible/api/health
-```
-
-### Nginx 尾部斜杠
-
-下面两处末尾的 `/` 都必须保留：
-
-```nginx
-location /plausible/ {
-    proxy_pass http://127.0.0.1:2000/;
-}
-```
-
-这种写法会让 Nginx 在转发时去掉 `/plausible/` 前缀。网页会在浏览器端自动为
-静态资源、材料链接、API 和下载地址补回公开路径前缀。
-
-如果 Nginx 自身也是同一 Docker Compose 网络中的容器，可以改为：
-
-```nginx
-proxy_pass http://magtransdb:1999/;
-```
-
-这种情况下需要确保 Nginx 和 `magtransdb` 服务加入同一个 Docker 网络。
-
-## 6. 部署在域名根路径
-
-如果网页发布在 `https://example.org/`，将 `.env` 改为：
-
-```dotenv
-BASE_URL=
-```
-
-Nginx 可以使用：
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:2000;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
-修改 `.env` 后需要重新创建容器：
-
-```bash
-docker compose up -d --force-recreate
-```
-
-## 7. 数据与下载文件
-
-Compose 将数据目录挂载为：
-
-```yaml
-/data/work/cmpdc/mrht/MR_HT_web_show:/data:ro
-```
-
-末尾的 `:ro` 表示容器只能读取数据。网页下载功能生成 ZIP 时使用
-`magtransdb_tmp` Docker 命名卷，不会修改原始数据目录。
-
-部分材料的下载包可能超过 1 GB。部署主机应为 Docker 数据目录预留足够空间。
-临时 ZIP 会在响应结束后由应用删除。
-
-## 8. 更新网页代码
-
-```bash
-cd /data/work/cmpdc/mrht/MR_HT_web_show/MagTransDB
-git pull --ff-only
-docker compose up -d --build
-docker compose ps
-```
-
-更新代码不会修改只读挂载的数据目录。
-
-## 9. 停止或重启
-
-```bash
-# 重启
-docker compose restart
-
-# 停止并移除容器，保留镜像和临时卷
-docker compose down
-
-# 查看日志
-docker compose logs -f --tail=200 magtransdb
-```
-
-一般不要使用 `docker compose down -v`，因为 `-v` 会删除 Compose 管理的临时卷。
-它不会删除只读挂载的科学数据，但通常没有必要执行。
-
-## 10. 常见问题
-
-### 端口已经被占用
-
-修改 `.env` 中的端口，例如：
-
-```dotenv
-HOST_PORT=2001
-```
-
-然后同步修改 Nginx 的 `proxy_pass` 并重新创建容器：
-
-```bash
-docker compose up -d --force-recreate
-```
-
-### 网页能打开，但静态资源或 API 返回 404
-
-检查：
-
-1. `.env` 中的 `BASE_URL` 是否与 Nginx 的 `location` 完全一致。
-2. `BASE_URL` 是否以 `/` 开头且末尾没有 `/`。
-3. `location /plausible/` 和 `proxy_pass .../` 的尾部斜杠是否保留。
-4. 是否设置了 `X-Forwarded-Prefix /plausible`。
-
-### 数据目录存在，但网页显示 0 个材料
-
-检查容器实际读取的路径：
-
-```bash
-docker compose exec magtransdb ls -la /data/Lattice | head
-docker compose exec magtransdb python -c \
-  'import os; print(os.environ.get("DATA_ROOT"))'
-```
-
-同时确认 Docker 进程对 `/data/work/cmpdc/mrht/MR_HT_web_show` 及其父目录具有
-读取和目录遍历权限。
-
-### 构建时无法拉取基础镜像
-
-如果出现 Docker Hub 超时或连接被重置，需要先配置服务器网络或 Docker 镜像
-加速器，然后重新执行：
-
-```bash
-docker compose build --pull
-docker compose up -d
-```
-
-## 11. Git 仓库内容
-
-`.gitignore` 和 `.dockerignore` 已排除：
-
-```text
-Lattice/
-MR/
-Band/
-fermi_surface/
-soc_fermi_surface/
-wosoc_fermi_surface/
-download/
-web_show/logs/
-web_show/backups/
-```
-
-提交前可以检查：
-
-```bash
-git status --short
-git ls-files | grep -E '^(Lattice|MR|Band|fermi_surface|download)/' && \
-  echo "ERROR: data files are tracked"
-```
-
-正常情况下，第二条命令不应输出任何数据文件。
-
-## 12. 不使用 Docker 的原有运行方式
-
-代码仍兼容根路径下的原有 Flask 和 Cloudflare Quick Tunnel 部署：
+用浏览器选一个有完整数据的可见材料，验证搜索、详情、晶体结构、SOC/无 SOC 能带、
+SOC/无 SOC 费米面、磁阻与 PDF，以及 Wannier/Fermi ZIP 下载。对最大的下载包记录
+首字节等待时间、最终大小，并用 `unzip -t` 验证。必要时由网关维护方调整超时。
+本文命令是交付说明，不代表本次已部署或已完成生产验收。
+
+## 更新与维护
+
+代码更新后在部署目录运行 `./scripts/release.sh`。
+数据目录保持只读。停止使用 `docker compose --env-file .env.production down`；通常无需 `down -v`。
+修改 `.env.production` 后重新运行发布脚本，单独 `restart` 不会应用新环境变量。
+
+如需独立根路径部署，将 `.env.production` 中的 `BASE_URL` 显式设为空。
+原有非容器方式仍可使用，需安装 `web_show/requirements.txt`、设置 `DATA_ROOT` 后运行：
 
 ```bash
 cd web_show
-python -c 'from app import create_app; create_app().run(host="0.0.0.0", port=1999)'
+BASE_URL= python -c 'from app import create_app; create_app().run(host="127.0.0.1", port=1999)'
 ```
-
-这种方式应保持 `BASE_URL` 为空。Cloudflare Quick Tunnel 地址是临时地址，重启
-`cloudflared` 后通常会变化。

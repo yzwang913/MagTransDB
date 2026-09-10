@@ -1,30 +1,27 @@
+name: magtransdb
+
 services:
-  magtransdb:
+  server:
+    image: magtransdb-server:${MAGTRANSDB_VERSION:-dev}
     build:
-      context: .
-      dockerfile: Dockerfile
-    image: ${IMAGE_NAME:-magtransdb:local}
-    restart: unless-stopped
-    environment:
-      BASE_URL: ${BASE_URL:-}
-      DATA_ROOT: /data
-      TMP_DIR: /app-tmp
+      context: ./web_show
+      labels:
+        org.opencontainers.image.revision: "${MAGTRANSDB_REVISION:-dev}"
+        org.opencontainers.image.source: https://github.com/yzwang913/MagTransDB
+    env_file:
+      - .env.production
     volumes:
-      - ${DATA_ROOT_HOST:-/data/work/cmpdc/mrht/MR_HT_web_show}:/data:ro
-      - magtransdb_tmp:/app-tmp
-    ports:
-      - ${HOST_BIND:-127.0.0.1}:${HOST_PORT:-2000}:1999
-    read_only: true
+      - ${DATA_ROOT_HOST:?Set DATA_ROOT_HOST in .env.production}:/data:ro
     healthcheck:
       test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1999/api/health', timeout=10)"
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-volumes:
-  magtransdb_tmp:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).close()",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped

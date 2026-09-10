@@ -1,6 +1,7 @@
 .git
 .gitignore
 .env
+.env.production
 __pycache__/
 *.py[cod]
 *.log
