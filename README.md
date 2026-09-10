@@ -1,108 +1,121 @@
 # MagTransDB
 
-MagTransDB 展示磁输运高通量计算结果。本仓库负责 Flask 应用、前端资源、
-`web_show/Dockerfile`、Compose 与业务验证，不包含科学计算数据。
-镜像构建上下文为 `web_show/`；Compose、环境配置和发布脚本保留在仓库根目录。
+MagTransDB 是磁输运高通量计算结果的展示与查询应用，使用 Flask 提供接口和静态页面，支持：
 
-## 生产部署约定
+- 材料检索、元素筛选与晶体结构查看。
+- 含自旋轨道耦合（SOC）和无 SOC 的能带、费米面展示。
+- 磁阻曲线与 PDF 查看。
+- 晶体结构文件及 Wannier / Fermi 数据打包下载。
 
-- 公开地址：`https://cmpdc.iphy.ac.cn/mtdb/`，应用名称保留 MagTransDB。
-- Compose project 为 `magtransdb`，service 为 `server`；容器监听 `8000`。
-- 网关内部回源 `magtransdb:8000`，去除 `/mtdb/` 前缀并传递
-  `X-Forwarded-Prefix: /mtdb`；公开 `/mtdb` 应跳转到 `/mtdb/`。
-- 两级网关、`web-gateway` 网络接入、别名注册与数据权限由 ops-knowledge
-  管理。应用 Compose 不维护这些内容。网关注册目标为
-  `project=magtransdb, service=server, alias=magtransdb`。
-- 容器以 root 运行，科学数据继续只读挂载到 `/data`，应用不能通过该挂载修改数据。
+仓库包含应用代码和部署配置，科学计算数据需单独准备。以下命令均从仓库根目录执行。
 
-## 数据与可写目录
+## 数据准备
 
-`DATA_ROOT_HOST` 必须指向已有目录，包含 `Lattice/`、`MR/`、`Band/`、
-`fermi_surface/` 和 `download/`。部署前确认数据目录存在，避免短写法挂载自动创建空目录。
-代码目录可以独立放在 `/home/tnzhu/projects/magtransdb`，不需要放进科学数据目录。
+应用从 `Lattice/` 建立材料索引，其他数据按材料 ID 关联。数据根目录应包含：
 
-当前数据交接基线为 Lattice/Band/fermi_surface/download 各 726 个一致的材料 ID，
-应用隐藏 11 个，预计显示 715 个。这个数量是当前验收基线，不是代码中的硬编码。
+```text
+<data-root>/
+├── Lattice/
+├── MR/
+├── Band/
+├── fermi_surface/
+│   └── <material-id>/
+│       ├── soc/FS3D.bxsf
+│       └── wosoc/FS3D.bxsf
+└── download/
+    └── <material-id>/
+        ├── soc/
+        └── wosoc/
+```
 
-Gunicorn 心跳临时文件通过 `--worker-tmp-dir /dev/shm` 放到 Docker 的内存文件系统，
-避免心跳文件操作依赖磁盘 I/O。
-下载 ZIP 使用系统临时目录 `/tmp`，位于容器可写层，无需单独挂载临时卷。
-不要把大 ZIP 放入 `/dev/shm`。容器删除后，其可写层中的临时文件也会删除。
+`download/` 下的 Wannier 文件支持 `*.win`、`*.wout` 和 `*hr.dat`。
+费米面也兼容旧版 `soc_fermi_surface/`、`wosoc_fermi_surface/` 布局。
+材料是否可用取决于实际数据及应用的隐藏规则，材料总数不作为固定部署指标。
 
-ZIP 在完整压缩后才开始响应，不会把整个 ZIP 读入内存；支持 HTTP Range。
-Linux 上应用在 `send_file` 打开文件后移除临时路径，响应持有的文件描述符关闭后
-释放磁盘空间。压缩异常会清理文件；进程被强制杀死或主机崩溃时，仍可能留下未完成
-ZIP，需要在无下载任务时清理 `/tmp` 中的残留文件。并发下载会分别生成 ZIP，应预留相应磁盘空间。
-两级网关的响应等待时间须覆盖压缩完成前的等待；实际生产大包的超时与吞吐需联调验收。
+下文以 `../magtransdb-data` 为数据根目录示例，使用前替换为自己的数据位置。
+先确认数据已存在；Compose 的目录挂载可能自动创建空目录，不能据此判断数据准备完成。
 
-## 正式部署命令（由用户安排执行）
+## 本地运行
 
-先将已审核的改动合入部署目录，再执行以下命令。需要 Docker Engine 和 Compose v2+，
-并具备拉取基础镜像和 Python 依赖的网络条件。
+使用 Python 3.12 创建虚拟环境并安装依赖：
 
 ```bash
-cd /home/tnzhu/projects/magtransdb
-# 首次部署时创建；已有配置则编辑它，不覆盖现有设置。
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r server/requirements.txt
+DATA_ROOT=../magtransdb-data BASE_URL= \
+  python -m flask --app server.app:create_app run --host 127.0.0.1 --port 1999
+```
+
+打开 [本地页面](http://127.0.0.1:1999/)。本地运行通过 `DATA_ROOT` 指定数据根目录；
+`BASE_URL` 留空表示从网站根路径访问。Flask 开发服务用于本地调试，生产环境使用下方的 Gunicorn 容器。
+
+## 容器部署
+
+需要 Docker Engine、Compose v2 和 Git，以及拉取基础镜像、安装 Python 依赖的网络条件。
+
+### 1. 配置环境
+
+首次部署创建配置文件，已有配置则直接编辑：
+
+```bash
 test -f .env.production || cp .env.example .env.production
 ```
 
-配置统一由 `.env.production` 加载，与 HSP 一致；该文件不进入 Git：
+编辑 `.env.production`，将 `DATA_ROOT_HOST` 替换为已准备好的数据目录，并按访问方式设置 `BASE_URL`：
 
 ```dotenv
+DATA_ROOT_HOST=../magtransdb-data
 BASE_URL=/mtdb
-DATA_ROOT_HOST=/data/work/cmpdc/mrht/MR_HT_web_show
-GUNICORN_CMD_ARGS="--bind 0.0.0.0:8000 --worker-class gthread --workers 2 --threads 4 --worker-tmp-dir /dev/shm --timeout 120 --access-logfile - --error-logfile -"
 ```
 
-容器内 `DATA_ROOT=/data` 由 Dockerfile 设置，无需重复配置；ZIP 使用系统临时目录。
-Gunicorn 使用常规端口 8000；保留 `--bind 0.0.0.0:8000`，供网关跨容器访问。
-Gunicorn 参数由 `GUNICORN_CMD_ARGS` 提供；调整进程数、线程数或超时后，运行
-`docker compose --env-file .env.production up -d` 重建容器即可，无需重新构建镜像。
-`--worker-tmp-dir /dev/shm` 将心跳文件与磁盘上的 ZIP 临时文件分开。
+保留模板中的 `GUNICORN_CMD_ARGS`，按负载调整进程数、线程数和超时。
+监听地址应保留 `0.0.0.0:8000`。Compose 默认不发布宿主机端口。
+`BASE_URL` 表示应用的公开访问路径前缀，根路径访问时显式设为空。
+`.env.production` 已被 Git 忽略，用于保存各环境的实际配置。
 
-发布入口为 `scripts/release.sh`，从根目录 `VERSION` 读取版本（初始 `0.1.0`），
-自动记录 Git revision，拉取基础镜像并构建，然后通过 Compose 后台启动服务。
-与 ARPES/HSP 一致，脚本不等待健康检查；启动后用 `docker compose ps` 查看状态。
+Compose 将科学数据只读挂载到容器，容器内的数据位置由 Dockerfile 配置。
+完整运行参数以 `.env.example`、`compose.yaml` 和 `server/Dockerfile` 为准。
+
+### 2. 构建并启动
 
 ```bash
-test -d /data/work/cmpdc/mrht/MR_HT_web_show/Lattice
 ./scripts/release.sh
 docker compose --env-file .env.production ps
 docker compose --env-file .env.production logs --tail=100 server
+```
+
+发布脚本读取 `VERSION` 和当前 Git revision，拉取基础镜像、构建应用并后台启动服务。
+脚本结束仅代表启动命令完成；确认 `server` 状态为 `healthy` 后，再执行下面的业务验收。
+
+### 3. 验证服务
+
+在容器内检查健康接口：
+
+```bash
 docker compose --env-file .env.production exec -T server python -c \
   'import urllib.request; print(urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=10).read().decode())'
 ```
 
-健康响应应包含 `status: "ok"`、`base_url: "/mtdb"`、`count: 715`。
-健康接口只确认应用和索引加载成功，不能代替各科学数据文件的业务验收。
-Compose 默认不发布宿主机端口；诊断在容器内执行，网关使用容器的 `8000` 端口。
-镜像使用 `magtransdb-server:${MAGTRANSDB_VERSION:-dev}`，构建时记录来源与 revision 标签；
-发布脚本自动设置版本标签与 revision，无需手动导出。
-容器重建后的网关网络接入由 ops-knowledge 的注册机制负责。
+确认 `status` 为 `ok`、`base_url` 与配置一致、`count` 与预期可见材料数量一致。
+健康接口可在材料索引为空或关联数据不完整时返回成功，不能代替数据完整性检查。
 
-网关就绪后检查：
-
-```bash
-curl --fail -I https://cmpdc.iphy.ac.cn/mtdb/
-curl --fail https://cmpdc.iphy.ac.cn/mtdb/api/health
-curl --fail -I https://cmpdc.iphy.ac.cn/mtdb/static/base-url.js
-```
-
-用浏览器选一个有完整数据的可见材料，验证搜索、详情、晶体结构、SOC/无 SOC 能带、
-SOC/无 SOC 费米面、磁阻与 PDF，以及 Wannier/Fermi ZIP 下载。对最大的下载包记录
-首字节等待时间、最终大小，并用 `unzip -t` 验证。必要时由网关维护方调整超时。
-本文命令是交付说明，不代表本次已部署或已完成生产验收。
+通过应用访问地址检查首页、`api/health` 和 `static/base-url.js`，
+再选择数据完整的材料验证检索、晶体结构、两种 SOC 模式的能带与费米面、磁阻及 PDF。
+下载 Wannier / Fermi ZIP，使用 `unzip -t` 检查压缩包，并用较大数据包确认等待时间和传输是否正常。
 
 ## 更新与维护
 
-代码更新后在部署目录运行 `./scripts/release.sh`。
-数据目录保持只读。停止使用 `docker compose --env-file .env.production down`；通常无需 `down -v`。
-修改 `.env.production` 后重新运行发布脚本，单独 `restart` 不会应用新环境变量。
+更新代码或环境配置后，运行 `./scripts/release.sh` 重新发布。
+单独执行 `restart` 不会应用新的环境变量。数据索引在应用启动时加载，更新数据后需重启服务以刷新索引。
 
-如需独立根路径部署，将 `.env.production` 中的 `BASE_URL` 显式设为空。
-原有非容器方式仍可使用，需安装 `web_show/requirements.txt`、设置 `DATA_ROOT` 后运行：
+停止服务：
 
 ```bash
-cd web_show
-BASE_URL= python -c 'from app import create_app; create_app().run(host="127.0.0.1", port=1999)'
+docker compose --env-file .env.production down
 ```
+
+下载 ZIP 会先在系统临时目录完成压缩，再开始响应；并发请求分别占用临时磁盘空间。
+Gunicorn 的超时需覆盖压缩等待时间。正常请求结束后临时文件会清理，
+进程被强制终止时可能残留，应在无下载任务时检查清理。
+Gunicorn 的心跳临时文件使用内存文件系统，ZIP 临时文件应使用有足够容量的磁盘空间。

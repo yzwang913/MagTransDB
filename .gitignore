@@ -4,9 +4,9 @@ __pycache__/
 *.py[cod]
 *.log
 *.bak*
-web_show/backups/
-web_show/logs/
-web_show/id.txt
+server/backups/
+server/logs/
+server/id.txt
 
 # Scientific data is mounted at runtime and must not be committed.
 Lattice/

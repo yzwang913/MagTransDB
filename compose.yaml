@@ -4,7 +4,7 @@ services:
   server:
     image: magtransdb-server:${MAGTRANSDB_VERSION:-dev}
     build:
-      context: ./web_show
+      context: ./server
       labels:
         org.opencontainers.image.revision: "${MAGTRANSDB_REVISION:-dev}"
         org.opencontainers.image.source: https://github.com/yzwang913/MagTransDB
