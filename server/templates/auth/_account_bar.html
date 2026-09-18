@@ -1,0 +1,12 @@
+{% if current_user.is_authenticated %}
+  <aside class="account-bar" aria-label="Signed-in account">
+    <span class="account-identity">
+      <strong>{{ current_user.full_name }}</strong>
+      <span>{{ current_user.institution }} · {{ current_user.position }}</span>
+    </span>
+    <form method="post" action="{{ auth_url('auth.logout') }}">
+      {{ logout_form.hidden_tag() }}
+      {{ logout_form.submit(class_="account-logout") }}
+    </form>
+  </aside>
+{% endif %}

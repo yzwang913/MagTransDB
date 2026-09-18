@@ -1,0 +1,12 @@
+{% extends "auth/base.html" %}
+{% block title %}{{ heading }}{% endblock %}
+{% block heading %}{{ heading }}{% endblock %}
+{% block description %}<p>{{ description }}</p>{% endblock %}
+{% block content %}
+  <form method="post" class="auth-form">
+    {{ form.hidden_tag() }}
+    {% with field=form.email, kwargs={'autocomplete': 'email'} %}{% include "auth/_field.html" %}{% endwith %}
+    {{ form.submit(class_="auth-primary") }}
+  </form>
+  <nav class="auth-links"><a href="{{ auth_url('auth.login') }}">Return to sign in</a></nav>
+{% endblock %}

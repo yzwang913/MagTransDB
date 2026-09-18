@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Account{% endblock %} | MagTransDB</title>
+    <link rel="icon" href="{{ auth_url('static', filename='assets/magtransdb-logo.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ auth_url('static', filename='styles.css') }}?v=auth1">
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <a class="auth-brand" href="{{ public_path('/') }}" aria-label="MagTransDB home">
+        <img src="{{ auth_url('static', filename='assets/magtransdb-logo.svg') }}" alt="MagTransDB">
+      </a>
+      <section class="auth-panel">
+        <header class="auth-panel-header">
+          <h1>{% block heading %}{% endblock %}</h1>
+          {% block description %}{% endblock %}
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="auth-messages" aria-live="polite">
+              {% for category, message in messages %}
+                <div class="auth-message auth-message-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </section>
+    </main>
+  </body>
+</html>

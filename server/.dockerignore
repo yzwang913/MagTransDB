@@ -6,6 +6,10 @@ __pycache__/
 *.py[cod]
 *.log
 *.bak*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+state/
 backups/
 logs/
 id.txt

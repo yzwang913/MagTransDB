@@ -1,0 +1,18 @@
+{% extends "auth/base.html" %}
+{% block title %}Register{% endblock %}
+{% block heading %}Create an account{% endblock %}
+{% block description %}<p>All fields are required. Your email address must be verified before sign-in.</p>{% endblock %}
+{% block content %}
+  <form method="post" class="auth-form">
+    {{ form.hidden_tag() }}
+    {% with field=form.full_name, kwargs={'autocomplete': 'name'} %}{% include "auth/_field.html" %}{% endwith %}
+    {% with field=form.institution, kwargs={'autocomplete': 'organization'} %}{% include "auth/_field.html" %}{% endwith %}
+    {% with field=form.position, kwargs={} %}{% include "auth/_field.html" %}{% endwith %}
+    {% with field=form.email, kwargs={'autocomplete': 'email'} %}{% include "auth/_field.html" %}{% endwith %}
+    {% with field=form.password, kwargs={'autocomplete': 'new-password'} %}{% include "auth/_field.html" %}{% endwith %}
+    {% with field=form.password_confirm, kwargs={'autocomplete': 'new-password'} %}{% include "auth/_field.html" %}{% endwith %}
+    <p class="auth-password-note">Use at least 12 characters.</p>
+    {{ form.submit(class_="auth-primary") }}
+  </form>
+  <nav class="auth-links"><a href="{{ auth_url('auth.login') }}">Already registered? Sign in</a></nav>
+{% endblock %}

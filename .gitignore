@@ -1,9 +1,17 @@
 .env
 .env.production
+.venv/
+.pytest_cache/
+.playwright-cli/
+output/
 __pycache__/
 *.py[cod]
 *.log
 *.bak*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+state/
 server/backups/
 server/logs/
 server/id.txt
