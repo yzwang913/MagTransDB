@@ -9,9 +9,14 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 
-from flask import Flask, jsonify, request, send_from_directory, send_file, abort, after_this_request
+from flask import Flask, jsonify, request, send_from_directory, send_file, abort, after_this_request, render_template
+
+try:
+    from .auth import init_auth
+except ImportError:  # Container entrypoint imports app.py as a top-level module.
+    from auth import init_auth
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -539,9 +544,10 @@ def load_materials_index(lattice_dir: Path) -> List[Dict]:
     return materials
 
 
-def create_app() -> Flask:
+def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
     app = Flask(__name__, static_folder=str(BASE_DIR / "static"), static_url_path="/static")
     app.config["BASE_URL"] = normalize_base_url(os.environ.get("BASE_URL", ""))
+    init_auth(app, test_config)
 
     def request_base_url() -> str:
         forwarded_prefix = (request.headers.get("X-Forwarded-Prefix") or "").split(",", 1)[0]
@@ -553,6 +559,8 @@ def create_app() -> Flask:
             abort(404)
         content = path.read_text(encoding="utf-8")
         content = content.replace("__APP_BASE_URL_JSON__", json.dumps(request_base_url()))
+        auth_bar = render_template("auth/_account_bar.html") if app.config["AUTH_ENABLED"] else ""
+        content = content.replace("__AUTH_ACCOUNT_BAR__", auth_bar)
         return app.response_class(content, mimetype="text/html")
 
     lattice_dir = Path(os.environ.get("LATTICE_DIR", str(DEFAULT_LATTICE_DIR))).resolve()

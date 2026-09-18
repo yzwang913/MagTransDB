@@ -1532,6 +1532,261 @@ footer{ display:none; }
   }
 }
 
+/* Authentication */
+.auth-page{
+  min-height:100vh;
+}
+
+.auth-shell{
+  width:min(520px, calc(100vw - 32px));
+  margin:0 auto;
+  padding:48px 0 64px;
+}
+
+.auth-brand{
+  display:flex;
+  justify-content:center;
+  margin-bottom:24px;
+}
+
+.auth-brand img{
+  width:min(360px, 80vw);
+  height:auto;
+  max-height:150px;
+  object-fit:contain;
+}
+
+.auth-panel{
+  padding:28px;
+  border:1px solid #dce2f2;
+  border-radius:8px;
+  background:#ffffff;
+  box-shadow:0 18px 44px rgba(15,23,42,0.10);
+}
+
+.auth-panel-header h1{
+  margin:0;
+  font-size:28px;
+  line-height:1.2;
+  letter-spacing:0;
+}
+
+.auth-panel-header{
+  display:block;
+  position:static;
+  top:auto;
+  left:auto;
+  width:auto;
+  margin:0;
+  padding:0;
+  transform:none;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+
+.auth-panel-header p{
+  margin:10px 0 22px;
+  color:#64748b;
+  line-height:1.55;
+}
+
+.auth-form{
+  display:grid;
+  gap:16px;
+}
+
+.auth-field{
+  display:grid;
+  gap:7px;
+}
+
+.auth-field > label{
+  color:#334155;
+  font-size:14px;
+  font-weight:600;
+}
+
+.auth-field input,
+.auth-field select{
+  width:100%;
+  min-height:44px;
+  padding:9px 11px;
+  border:1px solid #cbd5e1;
+  border-radius:6px;
+  background:#ffffff;
+  color:#0f172a;
+  font:inherit;
+}
+
+.auth-field input:focus,
+.auth-field select:focus{
+  border-color:#2563eb;
+  outline:3px solid rgba(37,99,235,0.14);
+}
+
+.auth-field-errors{
+  margin:0;
+  padding:0;
+  list-style:none;
+  color:#b91c1c;
+  font-size:13px;
+}
+
+.auth-check{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#475569;
+  font-size:14px;
+}
+
+.auth-check input{
+  width:18px;
+  height:18px;
+}
+
+.auth-primary{
+  min-height:44px;
+  border:1px solid #1d4ed8;
+  border-radius:6px;
+  background:#2563eb;
+  color:#ffffff;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.auth-primary:hover{
+  background:#1d4ed8;
+}
+
+.auth-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 18px;
+  margin-top:20px;
+  padding-top:18px;
+  border-top:1px solid #e2e8f0;
+}
+
+.auth-links a{
+  color:#1d4ed8;
+  font-size:14px;
+  font-weight:600;
+  text-decoration:none;
+}
+
+.auth-links a:hover{
+  text-decoration:underline;
+}
+
+.auth-password-note{
+  margin:-6px 0 0;
+  color:#64748b;
+  font-size:13px;
+}
+
+.auth-messages{
+  display:grid;
+  gap:8px;
+  margin-bottom:18px;
+}
+
+.auth-message{
+  padding:10px 12px;
+  border:1px solid #bfdbfe;
+  border-radius:6px;
+  background:#eff6ff;
+  color:#1e3a8a;
+  font-size:14px;
+  line-height:1.45;
+}
+
+.auth-message-error{
+  border-color:#fecaca;
+  background:#fef2f2;
+  color:#991b1b;
+}
+
+.auth-message-warning{
+  border-color:#fde68a;
+  background:#fffbeb;
+  color:#92400e;
+}
+
+.auth-message-success{
+  border-color:#bbf7d0;
+  background:#f0fdf4;
+  color:#166534;
+}
+
+.account-bar{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:120;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  max-width:min(520px, calc(100vw - 36px));
+  padding:10px 12px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  background:rgba(255,255,255,0.96);
+  box-shadow:0 12px 30px rgba(15,23,42,0.16);
+  backdrop-filter:blur(8px);
+}
+
+.account-identity{
+  display:grid;
+  min-width:0;
+  line-height:1.25;
+}
+
+.account-identity strong,
+.account-identity span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.account-identity span{
+  color:#64748b;
+  font-size:12px;
+}
+
+.account-logout{
+  min-height:34px;
+  padding:6px 10px;
+  border:1px solid #cbd5e1;
+  border-radius:6px;
+  background:#ffffff;
+  color:#1e3a8a;
+  font:inherit;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+@media (max-width: 600px){
+  .auth-shell{
+    padding-top:28px;
+  }
+  .auth-panel{
+    padding:20px;
+  }
+  .account-bar{
+    left:12px;
+    right:12px;
+    bottom:12px;
+    max-width:none;
+  }
+}
+
 /* Band block */
 #bandBlock .band-controls{
   display:flex;

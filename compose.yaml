@@ -12,6 +12,7 @@ services:
       - .env.production
     volumes:
       - ${DATA_ROOT_HOST:?Set DATA_ROOT_HOST in .env.production}:/data:ro
+      - ${AUTH_DB_HOST:?Set AUTH_DB_HOST in .env.production}:/state
     healthcheck:
       test:
         [
