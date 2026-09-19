@@ -41,7 +41,7 @@ class RegistrationForm(FlaskForm):
     )
     position = SelectField("Position", choices=POSITION_CHOICES, validators=[DataRequired()])
     email = StringField("Email", filters=[_strip], validators=[DataRequired(), Email(), Length(max=254)])
-    password = PasswordField("Password", validators=[DataRequired(), Length(min=12, max=128)])
+    password = PasswordField("Password", validators=[DataRequired(), Length(min=10, max=128)])
     password_confirm = PasswordField(
         "Confirm password",
         validators=[DataRequired(), EqualTo("password", message="Passwords must match.")],
@@ -55,7 +55,7 @@ class EmailForm(FlaskForm):
 
 
 class ResetPasswordForm(FlaskForm):
-    password = PasswordField("New password", validators=[DataRequired(), Length(min=12, max=128)])
+    password = PasswordField("New password", validators=[DataRequired(), Length(min=10, max=128)])
     password_confirm = PasswordField(
         "Confirm new password",
         validators=[DataRequired(), EqualTo("password", message="Passwords must match.")],

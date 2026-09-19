@@ -130,6 +130,17 @@ def test_registration_verification_login_and_logout(app, client):
     assert b"You have signed out" in response.data
 
 
+def test_password_minimum_length(app, client):
+    response = register(client, password="short9!!!")
+    assert response.status_code == 200
+    assert get_user_by_email(app.config["TEST_DATABASE_PATH"], "ada@example.org") is None
+
+    response = register(client, password="short9!!!!")
+    assert response.status_code == 200
+    assert b"Registration successful" in response.data
+    assert get_user_by_email(app.config["TEST_DATABASE_PATH"], "ada@example.org") is not None
+
+
 def test_duplicate_email_is_case_insensitive(app, client):
     register(client, email="Ada@Example.org")
     response = register(client, email="ada@example.org")

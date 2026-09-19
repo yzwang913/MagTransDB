@@ -11,7 +11,7 @@
     {% with field=form.email, kwargs={'autocomplete': 'email'} %}{% include "auth/_field.html" %}{% endwith %}
     {% with field=form.password, kwargs={'autocomplete': 'new-password'} %}{% include "auth/_field.html" %}{% endwith %}
     {% with field=form.password_confirm, kwargs={'autocomplete': 'new-password'} %}{% include "auth/_field.html" %}{% endwith %}
-    <p class="auth-password-note">Use at least 12 characters.</p>
+    <p class="auth-password-note">Use at least 10 characters.</p>
     {{ form.submit(class_="auth-primary") }}
   </form>
   <nav class="auth-links"><a href="{{ auth_url('auth.login') }}">Already registered? Sign in</a></nav>
