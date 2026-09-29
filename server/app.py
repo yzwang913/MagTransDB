@@ -57,6 +57,14 @@ EXCLUDED_MATERIAL_IDS = frozenset({
     "Ba3(CdSb2)2_SG12",
     "SrMgSn_SG62",
     "Te2AuCl_SG63",
+    "Rb2TlAu3_SG51",
+    "Bi_SG12",
+    "HfGeTe_SG129",
+    "BaPt_SG194",
+    "Mg_SG194",
+    "ZrGeS_SG129",
+    "CdO_SG225",
+    "Be_SG194",
 })
 
 ATOMIC_SYMBOLS = [
