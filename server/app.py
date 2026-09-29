@@ -40,8 +40,9 @@ def normalize_base_url(value: str) -> str:
         raise ValueError("BASE_URL must be a path prefix, for example /plausible")
     return "/" + text.strip("/")
 
-# Temporarily excluded from public display while their transport data is reviewed.
-TEMPORARILY_HIDDEN_MATERIAL_IDS = frozenset({
+# Excluded from published datasets. Private source archives may retain these
+# directories, so every deployment must filter them from the public index.
+EXCLUDED_MATERIAL_IDS = frozenset({
     "NbN_SG187",
     "Sr5Sb3_SG193",
     "TaSe2_SG164",
@@ -500,7 +501,7 @@ def load_materials_index(lattice_dir: Path) -> List[Dict]:
         if not entry.is_dir():
             continue
         mat_id = entry.name
-        if mat_id in TEMPORARILY_HIDDEN_MATERIAL_IDS:
+        if mat_id in EXCLUDED_MATERIAL_IDS:
             continue
         bposcar_path = entry / "BPOSCAR"
         poscar_path = entry / "POSCAR"
@@ -656,7 +657,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
     @app.route("/m/<mat_id>")
     def material_page(mat_id: str):
         # Serve the material detail page; the JS will read mat_id from the URL
-        if mat_id in TEMPORARILY_HIDDEN_MATERIAL_IDS:
+        if mat_id in EXCLUDED_MATERIAL_IDS:
             abort(404)
         return render_app_html("material.html")
 
@@ -866,7 +867,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
 
     @app.route("/api/materials/<mat_id>")
     def material_detail(mat_id: str):
-        if mat_id in TEMPORARILY_HIDDEN_MATERIAL_IDS:
+        if mat_id in EXCLUDED_MATERIAL_IDS:
             return jsonify({"error": "Not found"}), 404
         lattice_dir = Path(app.config["LATTICE_DIR"])  # type: ignore
         entry = lattice_dir / mat_id

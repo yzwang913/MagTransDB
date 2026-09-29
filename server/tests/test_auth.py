@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
-from app import create_app
+from app import EXCLUDED_MATERIAL_IDS, create_app, load_materials_index
 from auth.db import get_user_by_email
 
 
@@ -42,6 +42,17 @@ def app(tmp_path: Path, monkeypatch):
 @pytest.fixture()
 def client(app):
     return app.test_client()
+
+
+def test_excluded_materials_are_not_published(tmp_path: Path):
+    lattice_dir = tmp_path / "Lattice"
+    (lattice_dir / "Cu_SG225").mkdir(parents=True)
+    for material_id in EXCLUDED_MATERIAL_IDS:
+        (lattice_dir / material_id).mkdir()
+
+    indexed_ids = {record["id"] for record in load_materials_index(lattice_dir)}
+
+    assert indexed_ids == {"Cu_SG225"}
 
 
 def register(client, email="ada@example.org", password="correct-horse-42"):
