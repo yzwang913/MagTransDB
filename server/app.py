@@ -53,6 +53,9 @@ TEMPORARILY_HIDDEN_MATERIAL_IDS = frozenset({
     "SrAgAs_SG194",
     "Ta3AlC2_SG194",
     "TaN_SG189",
+    "Ba3(CdSb2)2_SG12",
+    "SrMgSn_SG62",
+    "Te2AuCl_SG63",
 })
 
 ATOMIC_SYMBOLS = [
