@@ -55,6 +55,31 @@ def test_excluded_materials_are_not_published(tmp_path: Path):
     assert indexed_ids == {"Cu_SG225"}
 
 
+def test_excluded_material_is_unreachable_even_when_files_exist(app, client):
+    register(client)
+    verify_registered_user(app, client)
+    response = client.post(
+        "/auth/login",
+        data={"email": "ada@example.org", "password": "correct-horse-42"},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+
+    # Leave the excluded material's files on disk: every material route must
+    # still refuse to serve it.
+    excluded_id = "Bi_SG12"
+    entry = Path(app.config["LATTICE_DIR"]) / excluded_id
+    entry.mkdir(parents=True, exist_ok=True)
+    (entry / "POSCAR").write_text("# dummy poscar\n", encoding="utf-8")
+
+    assert client.get(f"/m/{excluded_id}").status_code == 404
+    assert client.get(f"/api/materials/{excluded_id}").status_code == 404
+    assert client.get(f"/api/materials/{excluded_id}/poscar").status_code == 404
+    assert client.get(f"/api/fermi/{excluded_id}").status_code == 404
+    assert client.get(f"/api/band/{excluded_id}").status_code == 404
+    assert client.get(f"/api/mr/{excluded_id}/surfaces").status_code == 404
+
+
 def register(client, email="ada@example.org", password="correct-horse-42"):
     return client.post(
         "/auth/register",

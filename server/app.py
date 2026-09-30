@@ -41,7 +41,9 @@ def normalize_base_url(value: str) -> str:
     return "/" + text.strip("/")
 
 # Excluded from published datasets. Private source archives may retain these
-# directories, so every deployment must filter them from the public index.
+# directories, so load_materials_index filters them from the public index and
+# the reject_excluded_materials before-request hook keeps them unreachable on
+# every material route, even where their source files still exist.
 EXCLUDED_MATERIAL_IDS = frozenset({
     "NbN_SG187",
     "Sr5Sb3_SG193",
@@ -561,6 +563,15 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
     app.config["BASE_URL"] = normalize_base_url(os.environ.get("BASE_URL", ""))
     init_auth(app, test_config)
 
+    @app.before_request
+    def reject_excluded_materials():
+        # Excluded materials must stay unreachable on every route that serves
+        # material data, even on deployments where their source directories
+        # still exist, so enforce the filter centrally before any view runs.
+        mat_id = (request.view_args or {}).get("mat_id")
+        if mat_id in EXCLUDED_MATERIAL_IDS:
+            abort(404)
+
     def request_base_url() -> str:
         forwarded_prefix = (request.headers.get("X-Forwarded-Prefix") or "").split(",", 1)[0]
         return normalize_base_url(forwarded_prefix) if forwarded_prefix.strip() else app.config["BASE_URL"]
@@ -665,8 +676,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
     @app.route("/m/<mat_id>")
     def material_page(mat_id: str):
         # Serve the material detail page; the JS will read mat_id from the URL
-        if mat_id in EXCLUDED_MATERIAL_IDS:
-            abort(404)
         return render_app_html("material.html")
 
     @app.route("/static/fermi_render_temp.html")
@@ -875,8 +884,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
 
     @app.route("/api/materials/<mat_id>")
     def material_detail(mat_id: str):
-        if mat_id in EXCLUDED_MATERIAL_IDS:
-            return jsonify({"error": "Not found"}), 404
         lattice_dir = Path(app.config["LATTICE_DIR"])  # type: ignore
         entry = lattice_dir / mat_id
         meta = next((m for m in app.config["MATERIALS_INDEX"] if m["id"] == mat_id), None)
