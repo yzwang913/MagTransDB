@@ -3111,7 +3111,7 @@
     const loadMusB = () => loadMusFor(surfaceSelB, fixedAngleSel.value, muSelB);
     const visibleMrTemps = (temps) => (Array.isArray(temps) ? temps : [])
       .sort((x,y)=>x-y)
-      .filter((t) => ![10, 40, 70].some((hidden) => Math.abs(Number(t) - hidden) <= 1e-6));
+      .filter((t) => ![10, 40, 70, 100].some((hidden) => Math.abs(Number(t) - hidden) <= 1e-6));
 
     async function loadTempsA() {
       setHint('Loading temperatures...');
@@ -3126,7 +3126,7 @@
         setHint('No temperatures available');
         return;
       }
-      chooseClosestOption(fixedTempSel, 50, (v) => parseFloat(v));
+      chooseClosestOption(fixedTempSel, 130, (v) => parseFloat(v));
       setHint('');
     }
 
@@ -3141,7 +3141,7 @@
         setHint('No temperatures available');
         return;
       }
-      chooseClosestOption(fixedTempSel, 50, (v) => parseFloat(v));
+      chooseClosestOption(fixedTempSel, 130, (v) => parseFloat(v));
       selectPreferredTemps();
       tempPicker.sync();
       setHint('');
