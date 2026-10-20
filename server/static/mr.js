@@ -4470,7 +4470,7 @@
         [
           'Fourier: (rho*tau)(phi) = (rho*tau)0 + sum[n=1..8] { an cos(n phi) + bn sin(n phi) }',
           'Amplitude: An = sqrt(an^2 + bn^2),  Rn = An / |(rho*tau)0|',
-          'AMR = ((rho*tau)_max - (rho*tau)_min) / (rho*tau)_min',
+          'η = ((rho*tau)_max - (rho*tau)_min) / (rho*tau)_min',
           'RMS: A_rms = sqrt((1/N) sum_i [rho*tau(phi_i)-(rho*tau)0]^2) / |(rho*tau)0|',
         ].forEach((line, idx) => drawText(line, margin + pad, y + 18 + idx * 25, { font: '16px Georgia, serif', color: '#334155' }));
 
@@ -4493,7 +4493,7 @@
         ctx.stroke();
         const statW = (cardW - pad * 2 - 36) / 4;
         drawStat('(rho*tau)0', rho0El.textContent, '<rho*tau>_phi', margin + pad, y + 18, statW);
-        drawStat('AMR', amrEl.textContent, '((rho*tau)_max-(rho*tau)_min)/(rho*tau)_min', margin + pad + statW + 12, y + 18, statW);
+        drawStat('η', amrEl.textContent, '((rho*tau)_max-(rho*tau)_min)/(rho*tau)_min', margin + pad + statW + 12, y + 18, statW);
         drawStat('A_rms', rmsEl.textContent, 'sqrt((1/N) sum_i [rho*tau(phi_i)-(rho*tau)0]^2)/|(rho*tau)0|', margin + pad + (statW + 12) * 2, y + 18, statW);
         drawStat('Dominant harmonic', domEl.textContent, domRatioEl.textContent, margin + pad + (statW + 12) * 3, y + 18, statW);
 
@@ -4533,7 +4533,7 @@
         ctx.strokeStyle = '#dfe4ee';
         ctx.fill();
         ctx.stroke();
-        const cols = ['Btau', '(rho*tau)0', 'AMR', 'A_rms', 'n*', 'R_n*'];
+        const cols = ['Btau', '(rho*tau)0', 'η', 'A_rms', 'n*', 'R_n*'];
         const widths = [180, 430, 300, 300, 180, 250];
         let x = margin + pad;
         ctx.fillStyle = '#f1f5f9';
