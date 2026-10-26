@@ -1,0 +1,76 @@
+&TB_FILE
+Hrfile = 'wannier90_hr.dat'
+/
+
+LATTICE
+Angstrom
+7.5122097     0.0000000     0.0000000    
+-3.7561048     6.5057644     0.0000000    
+0.0000000     0.0000000     5.4679736    
+
+ATOM_POSITIONS
+12
+Cartisen
+Hg       3.7561048     2.1685881     3.5514693
+Hg       0.0000000     4.3371763     1.9165043
+Pt       0.0000000     0.0000000     0.0000000
+Pt       3.7561048     0.0000000     0.0000000
+Pt       1.8780524     3.2528822     0.0000000
+Pt      -1.8780524     3.2528822     0.0000000
+Se       1.8137284     5.3843329     4.2006106
+Se       0.0000000     2.2428631     4.2006106
+Se      -1.8137284     5.3843329     4.2006106
+Se       1.9423764     1.1214316     1.2673630
+Se       3.7561048     4.2629013     1.2673630
+Se       5.5698333     1.1214316     1.2673630
+
+
+&CONTROL
+Symmetry_import_calc  = T
+Boltz_OHE_calc        = T
+Fermilevel_calc=F
+/
+
+&SYSTEM
+E_FERMI =4.70671503068034
+Btheta = 90.00, Bphi = 0.00
+SOC = 0
+/
+
+&PARAMETERS
+OmegaNum = 5        ! omega number
+OmegaMin =  -0.02     ! energy interval
+OmegaMax =   0.02     ! energy interval
+Nk1=41  ! Increase this value if negative magnetoresistance appears.
+Nk2=41  ! Increase this value if negative magnetoresistance appears.
+Nk3=41  ! Increase this value if negative magnetoresistance appears.
+BTauNum = 101        ! Number of B*tau we calculate
+BTauMax = 20         ! The maximum B*tau, starting from Btau=0.
+Tmin = 10            ! Temperature in Kelvin
+Tmax = 310           ! Temperature in Kelvin
+NumT = 11            ! number temperature we calculate. T=Tmin+(Tmax-Tmin)/(NumT-1)
+Nslice_BTau_Max = 10000  ! Increase this value if negative magnetoresistance appears.
+EF_integral_range=0.06
+RKF45_PERIODIC_LEVEL=2  ! Increase this value if negative magnetoresistance appears.
+/
+
+KCUBE_BULK
+ 0.00  0.00  0.00   ! Original point for 3D k plane
+ 1.00  0.00  0.00   ! The first vector to define 3d k space plane
+ 0.00  1.00  0.00   ! The second vector to define 3d k space plane
+ 0.00  0.00  1.00   ! The third vector to define 3d k cube
+
+PROJECTORS
+1 1 1 1 1 1 1 1 1 1 1 97
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s

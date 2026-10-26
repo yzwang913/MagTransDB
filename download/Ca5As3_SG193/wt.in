@@ -1,0 +1,84 @@
+&TB_FILE
+Hrfile = 'wannier90_hr.dat'
+/
+
+LATTICE
+Angstrom
+8.5252497     0.0000000     0.0000000    
+-4.2626248     7.3830828     0.0000000    
+0.0000000     0.0000000     6.7983911    
+
+ATOM_POSITIONS
+16
+Cartisen
+Ca       4.2626248     2.4610276     0.0000000
+Ca       0.0000000     4.9220552     0.0000000
+Ca       0.0000000     4.9220552     3.3991956
+Ca       4.2626248     2.4610276     3.3991956
+Ca       3.1752896     5.4997630     5.0987933
+Ca       2.1746704     0.0000000     5.0987933
+Ca      -1.0873352     1.8833198     5.0987933
+Ca       1.0873352     1.8833198     1.6995978
+Ca       6.3505793     0.0000000     1.6995978
+Ca      -3.1752896     5.4997630     1.6995978
+As       1.6621406     2.8789120     5.0987933
+As       5.2009684     0.0000000     5.0987933
+As      -2.6004842     4.5041708     5.0987933
+As       2.6004842     4.5041708     1.6995978
+As       3.3242813     0.0000000     1.6995978
+As      -1.6621406     2.8789120     1.6995978
+
+
+&CONTROL
+Symmetry_import_calc  = T
+Boltz_OHE_calc        = T
+Fermilevel_calc=F
+/
+
+&SYSTEM
+E_FERMI =3.62937101565868
+Btheta = 90.00, Bphi = 0.00
+SOC = 0
+/
+
+&PARAMETERS
+OmegaNum = 5        ! omega number
+OmegaMin =  -0.02     ! energy interval
+OmegaMax =   0.02     ! energy interval
+Nk1=41  ! Increase this value if negative magnetoresistance appears.
+Nk2=41  ! Increase this value if negative magnetoresistance appears.
+Nk3=41  ! Increase this value if negative magnetoresistance appears.
+BTauNum = 101        ! Number of B*tau we calculate
+BTauMax = 20         ! The maximum B*tau, starting from Btau=0.
+Tmin = 10            ! Temperature in Kelvin
+Tmax = 310           ! Temperature in Kelvin
+NumT = 11            ! number temperature we calculate. T=Tmin+(Tmax-Tmin)/(NumT-1)
+Nslice_BTau_Max = 10000  ! Increase this value if negative magnetoresistance appears.
+EF_integral_range=0.06
+RKF45_PERIODIC_LEVEL=2  ! Increase this value if negative magnetoresistance appears.
+/
+
+KCUBE_BULK
+ 0.00  0.00  0.00   ! Original point for 3D k plane
+ 1.00  0.00  0.00   ! The first vector to define 3d k space plane
+ 0.00  1.00  0.00   ! The second vector to define 3d k space plane
+ 0.00  0.00  1.00   ! The third vector to define 3d k cube
+
+PROJECTORS
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 129
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s

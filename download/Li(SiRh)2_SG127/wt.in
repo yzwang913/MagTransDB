@@ -1,0 +1,73 @@
+&TB_FILE
+Hrfile = 'wannier90_hr.dat'
+package='VASP6'
+/
+
+LATTICE
+Angstrom
+7.0312605     0.0000000     0.0000000    
+0.0000000     7.0312605     0.0000000    
+0.0000000     0.0000000     2.7573648    
+
+ATOM_POSITIONS
+10
+Cartisen
+Li       3.5156303     3.5156303     0.0000000
+Li       0.0000000     0.0000000     0.0000000
+Si       2.4899137     6.0055440     0.0000000
+Si       4.5413468     1.0257166     0.0000000
+Si       1.0257166     2.4899137     0.0000000
+Si       6.0055440     4.5413468     0.0000000
+Rh       1.0514026     4.5670328     1.3786824
+Rh       5.9798580     2.4642277     1.3786824
+Rh       2.4642277     1.0514026     1.3786824
+Rh       4.5670328     5.9798580     1.3786824
+
+
+&CONTROL
+Symmetry_import_calc  = T
+Boltz_OHE_calc        = T
+Fermilevel_calc=F
+/
+
+&SYSTEM
+E_FERMI =9.60196388228104
+Btheta = 90.00, Bphi = 0.00
+SOC = 0
+/
+
+&PARAMETERS
+OmegaNum = 5        ! omega number
+OmegaMin =  -0.02     ! energy interval
+OmegaMax =   0.02     ! energy interval
+Nk1=41  ! Increase this value if negative magnetoresistance appears.
+Nk2=41  ! Increase this value if negative magnetoresistance appears.
+Nk3=41  ! Increase this value if negative magnetoresistance appears.
+BTauNum = 101        ! Number of B*tau we calculate
+BTauMax = 20         ! The maximum B*tau, starting from Btau=0.
+Tmin = 10            ! Temperature in Kelvin
+Tmax = 310           ! Temperature in Kelvin
+NumT = 11            ! number temperature we calculate. T=Tmin+(Tmax-Tmin)/(NumT-1)
+Nslice_BTau_Max = 10000  ! Increase this value if negative magnetoresistance appears.
+EF_integral_range=0.06
+RKF45_PERIODIC_LEVEL=2  ! Increase this value if negative magnetoresistance appears.
+/
+
+KCUBE_BULK
+ 0.00  0.00  0.00   ! Original point for 3D k plane
+ 1.00  0.00  0.00   ! The first vector to define 3d k space plane
+ 0.00  1.00  0.00   ! The second vector to define 3d k space plane
+ 0.00  0.00  1.00   ! The third vector to define 3d k cube
+
+PROJECTORS
+1 1 1 1 1 1 1 1 1 37
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s

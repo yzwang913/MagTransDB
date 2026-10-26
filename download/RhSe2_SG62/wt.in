@@ -1,0 +1,101 @@
+&TB_FILE
+Hrfile = 'wannier90_hr.dat'
+package='VASP6'
+/
+
+LATTICE
+Angstrom
+21.0906782     0.0000000     0.0000000    
+0.0000000     3.7745237     0.0000000    
+0.0000000     0.0000000     6.0177468    
+
+ATOM_POSITIONS
+24
+Cartisen
+Rh      12.1298548     0.9436309     0.4957321
+Rh       1.5845157     0.9436309     2.5131413
+Rh       8.9608234     2.8308928     5.5220147
+Rh      19.5061625     2.8308928     3.5046055
+Rh      17.0039986     0.9436309     0.4129233
+Rh       6.4586595     0.9436309     2.5959501
+Rh       4.0866795     2.8308928     5.6048235
+Rh      14.6320186     2.8308928     3.4217967
+Se      18.1451315     0.9436309     2.6611096
+Se       7.5997924     0.9436309     0.3477638
+Se       2.9455467     2.8308928     3.3566372
+Se      13.4908858     2.8308928     5.6699830
+Se      15.5619104     2.8308928     1.1580009
+Se       5.0165713     2.8308928     1.8508725
+Se       5.5287678     0.9436309     4.8597459
+Se      16.0741069     0.9436309     4.1668743
+Se      18.5464914     2.8308928     5.7920939
+Se       8.0011523     2.8308928     3.2345263
+Se       2.5441868     0.9436309     0.2256529
+Se      13.0895258     0.9436309     2.7832205
+Se      10.6681983     2.8308928     1.3464709
+Se       0.1228592     2.8308928     1.6624025
+Se      10.4224799     0.9436309     4.6712759
+Se      20.9678190     0.9436309     4.3553443
+
+
+&CONTROL
+Symmetry_import_calc  = T
+Boltz_OHE_calc        = T
+Fermilevel_calc=F
+/
+
+&SYSTEM
+E_FERMI =6.13213629207842
+Btheta = 90.00, Bphi = 0.00
+SOC = 0
+/
+
+&PARAMETERS
+OmegaNum = 5        ! omega number
+OmegaMin =  -0.02     ! energy interval
+OmegaMax =   0.02     ! energy interval
+Nk1=41  ! Increase this value if negative magnetoresistance appears.
+Nk2=41  ! Increase this value if negative magnetoresistance appears.
+Nk3=41  ! Increase this value if negative magnetoresistance appears.
+BTauNum = 101        ! Number of B*tau we calculate
+BTauMax = 20         ! The maximum B*tau, starting from Btau=0.
+Tmin = 10            ! Temperature in Kelvin
+Tmax = 310           ! Temperature in Kelvin
+NumT = 11            ! number temperature we calculate. T=Tmin+(Tmax-Tmin)/(NumT-1)
+Nslice_BTau_Max = 10000  ! Increase this value if negative magnetoresistance appears.
+EF_integral_range=0.06
+RKF45_PERIODIC_LEVEL=2  ! Increase this value if negative magnetoresistance appears.
+/
+
+KCUBE_BULK
+ 0.00  0.00  0.00   ! Original point for 3D k plane
+ 1.00  0.00  0.00   ! The first vector to define 3d k space plane
+ 0.00  1.00  0.00   ! The second vector to define 3d k space plane
+ 0.00  0.00  1.00   ! The third vector to define 3d k cube
+
+PROJECTORS
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 73
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s

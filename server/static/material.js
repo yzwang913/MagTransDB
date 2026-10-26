@@ -81,7 +81,7 @@ function headerText(meta, matId) {
     <span class="mat-header-download-wrap">
       <a class="mat-header-download" href="${downloadHref}" download aria-describedby="downloadDataTip">Download data</a>
       <span class="mat-header-download-tip" id="downloadDataTip" role="tooltip">
-        ZIP archive with soc/ and wosoc/ folders. Each folder contains wannier90.win, wannier90.wout, wannier90_hr.dat, and FS3D.bxsf.
+        ZIP archive with wt.in and soc/ and wosoc/ folders. Each folder contains wannier90.win, wannier90.wout, wannier90_hr.dat, and FS3D.bxsf.
       </span>
     </span>
   `;

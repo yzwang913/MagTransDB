@@ -1,0 +1,92 @@
+&TB_FILE
+Hrfile = 'wannier90_hr.dat'
+/
+
+LATTICE
+Angstrom
+7.5144793     0.0000000     0.0000000    
+0.0000000     8.6808180     2.8175843    
+0.0000000    -8.6808180     2.8175843    
+
+ATOM_POSITIONS
+20
+Cartisen
+S        6.2234740    -0.7048856     2.0796738
+S        1.2910053     0.7048856     2.0796738
+S        1.2910053    -0.7048856     4.8972581
+S        6.2234740     0.7048856     4.8972581
+S        4.3877064    -2.0292068     4.9049780
+S        3.1267729     2.0292068     4.9049780
+S        3.1267729    -2.0292068     2.0873937
+S        4.3877064     2.0292068     2.0873937
+Ta       5.4094125    -2.9017036     2.8174664
+Ta       2.1050668     2.9017036     2.8174664
+Ta       2.1050668     5.7791144     2.8174664
+Ta       5.4094125    -5.7791144     2.8174664
+Ta       0.7856432    -1.8795399     2.7817189
+Ta       6.7288361     1.8795399     2.7817189
+Ta       6.7288361     6.8012781     2.7817189
+Ta       0.7856432    -6.8012781     2.7817189
+Ta       4.9357508     4.3404090     2.7007974
+Ta       2.5787285    -4.3404090     2.7007974
+Ta       7.4744421     4.3404090     4.1990190
+Ta       0.0400372    -4.3404090     4.1990190
+
+
+&CONTROL
+Symmetry_import_calc  = T
+Boltz_OHE_calc        = T
+Fermilevel_calc=F
+/
+
+&SYSTEM
+E_FERMI =6.17816842285013
+Btheta = 90.00, Bphi = 0.00
+SOC = 0
+/
+
+&PARAMETERS
+OmegaNum = 5        ! omega number
+OmegaMin =  -0.02     ! energy interval
+OmegaMax =   0.02     ! energy interval
+Nk1=41  ! Increase this value if negative magnetoresistance appears.
+Nk2=41  ! Increase this value if negative magnetoresistance appears.
+Nk3=41  ! Increase this value if negative magnetoresistance appears.
+BTauNum = 101        ! Number of B*tau we calculate
+BTauMax = 20         ! The maximum B*tau, starting from Btau=0.
+Tmin = 10            ! Temperature in Kelvin
+Tmax = 310           ! Temperature in Kelvin
+NumT = 11            ! number temperature we calculate. T=Tmin+(Tmax-Tmin)/(NumT-1)
+Nslice_BTau_Max = 10000  ! Increase this value if negative magnetoresistance appears.
+EF_integral_range=0.06
+RKF45_PERIODIC_LEVEL=2  ! Increase this value if negative magnetoresistance appears.
+/
+
+KCUBE_BULK
+ 0.00  0.00  0.00   ! Original point for 3D k plane
+ 1.00  0.00  0.00   ! The first vector to define 3d k space plane
+ 0.00  1.00  0.00   ! The second vector to define 3d k space plane
+ 0.00  0.00  1.00   ! The third vector to define 3d k cube
+
+PROJECTORS
+1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 121
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s
+c s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s s

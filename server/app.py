@@ -1023,6 +1023,11 @@ def create_app(test_config: Optional[Dict[str, Any]] = None) -> Flask:
             if fermi_path:
                 entries.append((fermi_path, _bundle_arcname(mat_id, variant, "FS3D.bxsf")))
 
+        material_dir = _material_download_dir(mat_id)
+        wt_in_path = material_dir / "wt.in" if material_dir else None
+        if wt_in_path and wt_in_path.is_file():
+            entries.append((wt_in_path, f"{mat_id}/wt.in"))
+
         if not entries:
             return jsonify({"error": "download bundle files not found"}), 404
 
