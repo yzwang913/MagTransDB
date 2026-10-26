@@ -1111,6 +1111,56 @@
     return [-span / 2, span / 2];
   }
 
+  function ensureMinYSpan(min, max, opts, yScale, maxAbs) {
+    const fixedSpan = Number(opts.yMinSpan);
+    const relativeSpan = Number(opts.yMinRelativeSpan) * maxAbs;
+    const minSpan = Math.max(
+      Number.isFinite(fixedSpan) ? fixedSpan : 0,
+      Number.isFinite(relativeSpan) ? relativeSpan : 0
+    ) / yScale;
+    if (minSpan <= 0 || max - min >= minSpan) return [min, max];
+    if (Number.isFinite(opts.yMin)) return [min, min + minSpan];
+    if (Number.isFinite(opts.yMax)) return [max - minSpan, max];
+    const center = (min + max) / 2;
+    return [center - minSpan / 2, center + minSpan / 2];
+  }
+
+  function yTickStep(opts, yScale, maxAbs) {
+    const fixedStep = Number(opts.yTickStep) / yScale;
+    const relativeStep = Number(opts.yTickRelativeStep) * maxAbs / yScale;
+    const digits = Number.isFinite(opts.yTickDigits) ? Math.max(0, Math.floor(opts.yTickDigits)) : 2;
+    const precision = Math.pow(10, Math.min(digits, 12));
+    const readableRelativeStep = Number.isFinite(relativeStep) && relativeStep > 0
+      ? Math.ceil(relativeStep * precision - 1e-10) / precision
+      : 0;
+    return Math.max(Number.isFinite(fixedStep) ? fixedStep : 0, readableRelativeStep);
+  }
+
+  function snapYDomainToTickStep(min, max, opts, yScale, maxAbs) {
+    const baseStep = yTickStep(opts, yScale, maxAbs);
+    if (!Number.isFinite(baseStep) || baseStep <= 0 || axisZoomValue(opts.yZoom) > 1) return [min, max];
+    const lower = Number.isFinite(opts.yMin) ? min : Math.floor(min / baseStep) * baseStep;
+    const firstTick = Math.ceil(lower / baseStep) * baseStep || 0;
+    const upper = Math.ceil(max / baseStep) * baseStep;
+    const stride = Math.max(1, Math.ceil((upper - firstTick) / (baseStep * 8)));
+    const step = baseStep * stride;
+    return [lower, Math.max(firstTick + step, Math.ceil(upper / step) * step)];
+  }
+
+  function yTickValues(min, max, opts, yScale, maxAbs) {
+    const baseStep = yTickStep(opts, yScale, maxAbs);
+    if (Number.isFinite(baseStep) && baseStep > 0 && axisZoomValue(opts.yZoom) <= 1) {
+      const firstTick = Math.ceil(min / baseStep) * baseStep || 0;
+      const stride = Math.max(1, Math.ceil((max - firstTick) / (baseStep * 8)));
+      const step = baseStep * stride;
+      const ticks = [];
+      for (let tick = firstTick; tick <= max + step * 1e-8; tick += step) ticks.push(tick);
+      return ticks;
+    }
+    const steps = opts.yZeroLine ? 4 : 5;
+    return Array.from({ length: steps + 1 }, (_, i) => min + (max - min) * i / steps);
+  }
+
   // canvas plotting utility
   function drawPlot(canvas, seriesInput, opts={}) {
     const dpi = window.devicePixelRatio || 1;
@@ -1174,6 +1224,8 @@
         ymaxS = yBound;
       }
     }
+    [yminS, ymaxS] = ensureMinYSpan(yminS, ymaxS, opts, yScale, maxAbs);
+    [yminS, ymaxS] = snapYDomainToTickStep(yminS, ymaxS, opts, yScale, maxAbs);
     [yminS, ymaxS] = zoomYDomain(yminS, ymaxS, opts.yZoom, opts);
     yrS = (ymaxS - yminS) || 1;
     const x2px = (x) => padL + ((x - xmin) / xr) * plotW;
@@ -1208,9 +1260,7 @@
       const fixed = v.toFixed(digits);
       return fixed === '-0' || fixed === '-0.00' ? (digits === 0 ? '0' : (0).toFixed(digits)) : fixed;
     };
-    const yTickSteps = opts.yZeroLine ? 4 : 5;
-    for (let i=0;i<=yTickSteps;i++){
-      const tS = yminS + (yrS * i / yTickSteps);
+    for (const tS of yTickValues(yminS, ymaxS, opts, yScale, maxAbs)) {
       const py = y2px(tS);
       ctx.strokeStyle = '#e8edf5';
       ctx.lineWidth = 1;
@@ -1455,6 +1505,8 @@
         ymaxS = yBound;
       }
     }
+    [yminS, ymaxS] = ensureMinYSpan(yminS, ymaxS, opts, yScale, maxAbs);
+    [yminS, ymaxS] = snapYDomainToTickStep(yminS, ymaxS, opts, yScale, maxAbs);
     [yminS, ymaxS] = zoomYDomain(yminS, ymaxS, opts.yZoom, opts);
     yrS = (ymaxS - yminS) || 1;
     const x2px = (x) => padL + ((x - xmin) / xr) * plotW;
@@ -1481,9 +1533,7 @@
       parts.push(`<line x1="${px.toFixed(2)}" y1="${padT}" x2="${px.toFixed(2)}" y2="${(padT + plotH).toFixed(2)}" stroke="#e8edf5" stroke-width="1"/>`);
       parts.push(`<text x="${px.toFixed(2)}" y="${(padT + plotH + 16).toFixed(2)}" text-anchor="middle" font-size="12" fill="#111827">${svgEscape(fmtTick(t))}</text>`);
     }
-    const yTickSteps = opts.yZeroLine ? 4 : 5;
-    for (let i = 0; i <= yTickSteps; i++) {
-      const tS = yminS + (yrS * i / yTickSteps);
+    for (const tS of yTickValues(yminS, ymaxS, opts, yScale, maxAbs)) {
       const py = y2px(tS);
       parts.push(`<line x1="${padL}" y1="${py.toFixed(2)}" x2="${(padL + plotW).toFixed(2)}" y2="${py.toFixed(2)}" stroke="#e8edf5" stroke-width="1"/>`);
       parts.push(`<text x="${padL - 6}" y="${py.toFixed(2)}" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#111827">${svgEscape(fmtY(tS))}</text>`);
@@ -3328,35 +3378,35 @@
         drawPlot(
           canvasRhoA,
           expandSeriesToBtauDomain(rhoListA, { odd: oddA }),
-          btauPlotOpts({ ...zoomA, xlabel: 'Bτ (T·ps)', ylabelBase: 'ρ', ylabelSub: compA, ylabelTail: '·τ', ylabelUnits: '(Ω·m·s)', yZeroLine: oddA })
+          btauPlotOpts({ ...zoomA, xlabel: 'Bτ (T·ps)', ylabelBase: 'ρ', ylabelSub: compA, ylabelTail: '·τ', ylabelUnits: '(Ω·m·s)', yZeroLine: oddA, yMinRelativeSpan: 0.2, yTickRelativeStep: 0.05 })
         );
         drawPlot(
           canvasSigmaA,
           expandSeriesToBtauDomain(sigmaListA, { odd: oddA }),
-          btauPlotOpts({ ...zoomA, xlabel: 'Bτ (T·ps)', ylabelBase: 'σ', ylabelSub: compA, ylabelTail: '/τ', ylabelUnits: '(Ω·m·s)⁻¹', ylabelUnitsGap: 22, yZeroLine: oddA })
+          btauPlotOpts({ ...zoomA, xlabel: 'Bτ (T·ps)', ylabelBase: 'σ', ylabelSub: compA, ylabelTail: '/τ', ylabelUnits: '(Ω·m·s)⁻¹', ylabelUnitsGap: 22, yZeroLine: oddA, yMinRelativeSpan: 0.2, yTickRelativeStep: 0.05 })
         );
         if (showMRA) {
           drawPlot(
             canvasMRA,
             expandSeriesToBtauDomain(mrListA),
-            btauPlotOpts({ ...zoomA, xlabel: 'Bτ (T·ps)', ylabel: 'MR (%)', yMin: 0, yScientific: false, yTickDigits: 0 })
+            btauPlotOpts({ ...zoomA, xlabel: 'Bτ (T·ps)', ylabel: 'MR (%)', yMin: -2, yMinSpan: 22, yTickStep: 5, yScientific: false, yTickDigits: 0 })
           );
         }
         drawPlot(
           canvasRhoB,
           expandSeriesToBtauDomain(rhoListB, { odd: oddB }),
-          btauPlotOpts({ ...zoomB, xlabel: 'Bτ (T·ps)', ylabelBase: 'ρ', ylabelSub: compB, ylabelTail: '·τ', ylabelUnits: '(Ω·m·s)', yZeroLine: oddB })
+          btauPlotOpts({ ...zoomB, xlabel: 'Bτ (T·ps)', ylabelBase: 'ρ', ylabelSub: compB, ylabelTail: '·τ', ylabelUnits: '(Ω·m·s)', yZeroLine: oddB, yMinRelativeSpan: 0.2, yTickRelativeStep: 0.05 })
         );
         drawPlot(
           canvasSigmaB,
           expandSeriesToBtauDomain(sigmaListB, { odd: oddB }),
-          btauPlotOpts({ ...zoomB, xlabel: 'Bτ (T·ps)', ylabelBase: 'σ', ylabelSub: compB, ylabelTail: '/τ', ylabelUnits: '(Ω·m·s)⁻¹', ylabelUnitsGap: 22, yZeroLine: oddB })
+          btauPlotOpts({ ...zoomB, xlabel: 'Bτ (T·ps)', ylabelBase: 'σ', ylabelSub: compB, ylabelTail: '/τ', ylabelUnits: '(Ω·m·s)⁻¹', ylabelUnitsGap: 22, yZeroLine: oddB, yMinRelativeSpan: 0.2, yTickRelativeStep: 0.05 })
         );
         if (showMRB) {
           drawPlot(
             canvasMRB,
             expandSeriesToBtauDomain(mrListB),
-            btauPlotOpts({ ...zoomB, xlabel: 'Bτ (T·ps)', ylabel: 'MR (%)', yMin: 0, yScientific: false, yTickDigits: 0 })
+            btauPlotOpts({ ...zoomB, xlabel: 'Bτ (T·ps)', ylabel: 'MR (%)', yMin: -2, yMinSpan: 22, yTickStep: 5, yScientific: false, yTickDigits: 0 })
           );
         }
         if (statusA) {

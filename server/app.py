@@ -59,6 +59,9 @@ EXCLUDED_MATERIAL_IDS = frozenset({
     "Ba3(CdSb2)2_SG12",
     "SrMgSn_SG62",
     "Te2AuCl_SG63",
+    # Excluded because these materials are magnetic.
+    "Cr_SG229",
+    "CoBiO3_SG99",
     "Rb2TlAu3_SG51",
     "Bi_SG12",
     "HfGeTe_SG129",
