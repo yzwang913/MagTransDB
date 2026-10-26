@@ -38,9 +38,9 @@ SOC = 0
 OmegaNum = 5        ! omega number
 OmegaMin =  -0.02     ! energy interval
 OmegaMax =   0.02     ! energy interval
-Nk1=41  ! Increase this value if negative magnetoresistance appears.
-Nk2=41  ! Increase this value if negative magnetoresistance appears.
-Nk3=41  ! Increase this value if negative magnetoresistance appears.
+Nk1=32  ! Increase this value if negative magnetoresistance appears.
+Nk2=32  ! Increase this value if negative magnetoresistance appears.
+Nk3=32  ! Increase this value if negative magnetoresistance appears.
 BTauNum = 101        ! Number of B*tau we calculate
 BTauMax = 20         ! The maximum B*tau, starting from Btau=0.
 Tmin = 10            ! Temperature in Kelvin
